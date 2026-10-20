@@ -1,0 +1,6 @@
+node_modules
+dist
+package-lock.json
+docs/01_ESPECIFICACION_CODEX.md
+docs/02_ESQUEMA_SQL.sql
+docs/03_PROMPTS_CODEX.md
