@@ -6,9 +6,9 @@ describe("Cliente HTTP", () => {
     const data = {
       status: "ok",
       service: "unioportunidades-api",
-      phase: 0,
-      authentication: "not_implemented",
-      database: "not_connected",
+      phase: 1,
+      authentication: "not_configured",
+      database: "not_configured",
     };
     const fetchMock = vi
       .fn()

@@ -14,7 +14,10 @@
     "test": "npm run test --workspaces",
     "lint": "eslint .",
     "format": "prettier --write .",
-    "format:check": "prettier --check ."
+    "format:check": "prettier --check .",
+    "db:migrate": "npm run db:migrate -w @unioportunidades/api",
+    "db:diagnose": "npm run db:diagnose -w @unioportunidades/api",
+    "seed:demo": "npm run seed:demo -w @unioportunidades/api"
   },
   "devDependencies": {
     "concurrently": "^9.2.0",

@@ -1,3 +1,3 @@
 # Módulo organizations
 
-Reservado para fases posteriores. Sin endpoints de negocio en Fase 0.
+Alta inicial y lectura propia implementadas en Fase 1 mediante router de autenticación y OrganizationsRepository. Revisión, suspensión y permisos administrativos pendientes de Fase 2.

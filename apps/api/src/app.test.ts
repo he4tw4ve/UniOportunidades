@@ -6,7 +6,7 @@ describe("Infraestructura de API", () => {
   it("informa salud sin simular conexión a datos o autenticación", async () => {
     const res = await request(createApp()).get("/api/v1/health");
     expect(res.status).toBe(200);
-    expect(res.body.data.database).toBe("not_connected");
+    expect(res.body.data.database).toBe("not_configured");
     expect(res.body.error).toBeNull();
   });
   it("devuelve error uniforme en rutas ausentes", async () => {

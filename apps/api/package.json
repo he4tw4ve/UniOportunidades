@@ -8,18 +8,26 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "test": "vitest run",
-    "lint": "eslint src"
+    "lint": "eslint src",
+    "db:migrate": "tsx ../../scripts/migrate.ts",
+    "db:diagnose": "tsx src/cli/diagnose-db.ts",
+    "seed:demo": "tsx ../../scripts/seed-demo.ts"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.118.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
+    "express-rate-limit": "^8.7.1",
+    "pg": "^8.23.1",
     "zod": "^4.1.12"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.10",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.10.0",
+    "@types/pg": "^8.23.1",
     "@types/supertest": "^6.0.3",
     "supertest": "^7.1.4",
     "tsx": "^4.20.6",

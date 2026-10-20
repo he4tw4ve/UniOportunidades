@@ -1,3 +1,3 @@
-# Pendiente
+# Persistencia
 
-Estructura reservada. Implementación a partir de Fase 1; sin ejecución de migraciones ni semillas en Fase 0.
+Pool PostgreSQL, transacciones, repositorios parametrizados de perfiles/organizaciones, runner de migración y fixtures ficticios. Las contraseñas y tokens de usuario pertenecen a Supabase Auth y nunca se escriben aquí. Pruebas con PostgreSQL embebido sin servicios remotos.

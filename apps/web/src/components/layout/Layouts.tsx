@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from "react-router-dom";
 import { GraduationCap, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/features/auth/AuthProvider";
 export function Brand() {
   return (
     <Link
@@ -13,6 +14,7 @@ export function Brand() {
   );
 }
 export function CatalogLayout() {
+  const { auth } = useAuth();
   return (
     <>
       <a className="skip-link" href="#contenido">
@@ -28,8 +30,17 @@ export function CatalogLayout() {
             <Link to="/ofertas">Catálogo</Link>
             <Link to="/registro-organizacion">Organizaciones</Link>
             <Button asChild>
-              <Link to="/iniciar-sesion">
-                Iniciar sesión <ArrowUpRight size={16} aria-hidden="true" />
+              <Link
+                to={
+                  auth.status === "authenticated"
+                    ? "/mi-perfil"
+                    : "/iniciar-sesion"
+                }
+              >
+                {auth.status === "authenticated"
+                  ? "Mi perfil"
+                  : "Iniciar sesión"}{" "}
+                <ArrowUpRight size={16} aria-hidden="true" />
               </Link>
             </Button>
           </nav>
@@ -87,6 +98,9 @@ export function WorkspaceLayout({ area }: { area: "publisher" | "admin" }) {
             ))}
             <Link className="px-3 py-3 text-sm" to="/ofertas">
               Volver al catálogo
+            </Link>
+            <Link className="px-3 py-3 text-sm" to="/mi-perfil">
+              Mi perfil y sesión
             </Link>
           </nav>
         </aside>

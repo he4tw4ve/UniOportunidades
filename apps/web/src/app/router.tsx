@@ -6,7 +6,8 @@ import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { PendingPage as CatalogPage } from "@/features/catalogo/PendingPage";
 import { PendingPage as PublisherPage } from "@/features/publicador/PendingPage";
 import { PendingPage as AdminPage } from "@/features/admin/PendingPage";
-import { PendingPage as ProfilePage } from "@/features/perfil/PendingPage";
+import { ProfilePage } from "@/features/perfil/ProfilePage";
+import { RegistrationPage } from "@/features/auth/RegistrationPage";
 export const router = createBrowserRouter([
   {
     element: <CatalogLayout />,
@@ -19,7 +20,7 @@ export const router = createBrowserRouter([
     children: [
       { path: "/", element: <HomePage /> },
       { path: "/iniciar-sesion", element: <AccessPage /> },
-      { path: "/registro-organizacion", element: <AccessPage registration /> },
+      { path: "/registro-organizacion", element: <RegistrationPage /> },
       {
         element: <ProtectedRoute roles={["student", "publisher", "admin"]} />,
         children: [

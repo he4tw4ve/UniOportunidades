@@ -21,9 +21,9 @@ export function HomePage() {
         className="mb-10 rounded-xl border border-teal-200 bg-teal-50 p-4 text-sm text-teal-950"
         role="status"
       >
-        <strong>Prototipo en construcción · Fase 0.</strong> La autenticación y
-        la base de datos aún no están conectadas. Puedes explorar esta portada
-        sin credenciales.
+        <strong>Prototipo en construcción · Fase 1.</strong> Acceso con cuentas
+        de demostración y registro de publicadores. Catálogo y moderación se
+        implementarán en fases posteriores.
       </div>
       <section className="grid items-center gap-10 py-6 md:grid-cols-[1.4fr_1fr]">
         <div>
@@ -105,7 +105,10 @@ export function HomePage() {
               ? "Consultando API…"
               : health.isError
                 ? health.error.message
-                : "API disponible. Autenticación pendiente; base de datos sin conectar."}
+                : health.data?.authentication === "configured" &&
+                    health.data.database === "available"
+                  ? "API y PostgreSQL disponibles. Autenticación configurada."
+                  : "API disponible. Falta configurar Supabase y PostgreSQL en el servidor."}
         </p>
         {health.isError && (
           <Button
@@ -117,8 +120,8 @@ export function HomePage() {
           </Button>
         )}
         <p className="mt-3 text-sm text-muted-foreground">
-          Fase 1 incorporará cuentas de demostración y persistencia. Nunca uses
-          tu contraseña universitaria real.
+          Las cuentas estudiantiles son ficticias. Nunca uses tu contraseña
+          universitaria real.
         </p>
       </section>
     </>
