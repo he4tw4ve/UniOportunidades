@@ -1,3 +1,3 @@
 # Módulo organizations
 
-Alta inicial y lectura propia implementadas en Fase 1 mediante router de autenticación y OrganizationsRepository. Revisión, suspensión y permisos administrativos pendientes de Fase 2.
+Alta inicial por identidad confirmada y lectura propia; listado/detalle administrativo, decisiones, permisos explícitos y bloqueo de publicación implementados. `OrganizationManagementRepository` aplica transacciones, bloqueos, versión, revisión y auditoría. No cambia el esquema de Fase 1. CRUD de ofertas pendiente de Fase 3.

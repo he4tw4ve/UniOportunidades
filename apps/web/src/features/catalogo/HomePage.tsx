@@ -21,9 +21,9 @@ export function HomePage() {
         className="mb-10 rounded-xl border border-teal-200 bg-teal-50 p-4 text-sm text-teal-950"
         role="status"
       >
-        <strong>Prototipo en construcción · Fase 1.</strong> Acceso con cuentas
-        de demostración y registro de publicadores. Catálogo y moderación se
-        implementarán en fases posteriores.
+        <strong>Prototipo en construcción · Fase 2.</strong> Acceso con cuentas
+        de demostración, registro y revisión de organizaciones. La publicación y
+        moderación de ofertas se implementarán en fases posteriores.
       </div>
       <section className="grid items-center gap-10 py-6 md:grid-cols-[1.4fr_1fr]">
         <div>

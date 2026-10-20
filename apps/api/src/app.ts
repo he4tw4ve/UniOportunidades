@@ -26,7 +26,7 @@ export function createApp(
       data: {
         status: database === "unavailable" ? "degraded" : "ok",
         service: "unioportunidades-api",
-        phase: 1,
+        phase: 2,
         authentication: auth ? "configured" : "not_configured",
         database,
       },

@@ -4,6 +4,7 @@ import { createApp } from "./app.js";
 import { createPool } from "./db/pool.js";
 import { ProfilesRepository } from "./db/profilesRepository.js";
 import { OrganizationsRepository } from "./db/organizationsRepository.js";
+import { OrganizationManagementRepository } from "./db/organizationManagementRepository.js";
 import { createAuthGateway } from "./modules/auth/gateway.js";
 import {
   AuthService,
@@ -24,6 +25,7 @@ const deps =
         gateway,
         profiles,
         organizations: new OrganizationsRepository(pool),
+        organizationManagement: new OrganizationManagementRepository(pool),
         service: new AuthService(
           gateway,
           profiles,

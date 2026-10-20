@@ -13,11 +13,17 @@ import {
 } from "../../middleware/authenticate.js";
 import { authLimiter } from "../../middleware/limiter.js";
 import { AppError } from "../../shared/errors.js";
+import {
+  adminOrganizationsRouter,
+  publicationGuardRouter,
+  type OrganizationManagement,
+} from "../organizations/router.js";
 export interface AuthDependencies {
   gateway: AuthGateway;
   service: AuthService;
   profiles: Pick<ProfilesRepository, "findById" | "list">;
   organizations: Pick<OrganizationsRepository, "register">;
+  organizationManagement?: OrganizationManagement;
 }
 export function authRoutes(deps: AuthDependencies) {
   const router = Router();
@@ -90,6 +96,11 @@ export function authRoutes(deps: AuthDependencies) {
     });
   });
   router.use("/admin", verify, profile, requireRole("admin"));
+  if (deps.organizationManagement)
+    router.use(
+      "/admin/organizaciones",
+      adminOrganizationsRouter(deps.organizationManagement),
+    );
   router.get("/admin/usuarios", async (_req, res) =>
     res.json({
       data: await deps.profiles.list(),
@@ -98,15 +109,22 @@ export function authRoutes(deps: AuthDependencies) {
     }),
   );
   router.use("/publicador", verify, profile, requireRole("publisher"));
+  if (deps.organizationManagement)
+    router.use(
+      "/publicador",
+      publicationGuardRouter(deps.organizationManagement),
+    );
   router.use(["/ofertas", "/catalogos"], verify, profile);
   router.get(
     "/organizaciones/mia",
     verify,
     profile,
     requireRole("publisher"),
-    (_req, res) =>
+    async (_req, res) =>
       res.json({
-        data: authenticatedProfile(res).organizacion,
+        data: deps.organizationManagement
+          ? await deps.organizationManagement.mine(authenticatedProfile(res).id)
+          : authenticatedProfile(res).organizacion,
         error: null,
         meta: null,
       }),

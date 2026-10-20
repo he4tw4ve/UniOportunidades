@@ -73,6 +73,11 @@ export function RegistrationPage() {
           <Link to="/mi-perfil" className="underline">
             Ver mi perfil
           </Link>
+          {auth.role === "publisher" && (
+            <Link className="ml-3 underline" to="/publicador/panel">
+              Ver estado de mi organización
+            </Link>
+          )}
         </p>
       ) : auth.status === "loading" ? (
         <p role="status">Validando sesión…</p>

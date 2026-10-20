@@ -8,6 +8,9 @@ import { PendingPage as PublisherPage } from "@/features/publicador/PendingPage"
 import { PendingPage as AdminPage } from "@/features/admin/PendingPage";
 import { ProfilePage } from "@/features/perfil/ProfilePage";
 import { RegistrationPage } from "@/features/auth/RegistrationPage";
+import { OrganizationDashboard } from "@/features/publicador/OrganizationDashboard";
+import { OrganizationsPage } from "@/features/admin/OrganizationsPage";
+import { OrganizationDetailPage } from "@/features/admin/OrganizationDetailPage";
 export const router = createBrowserRouter([
   {
     element: <CatalogLayout />,
@@ -53,7 +56,12 @@ export const router = createBrowserRouter([
           "organizacion",
         ].map((path) => ({
           path: `/publicador/${path}`,
-          element: <PublisherPage />,
+          element:
+            path === "panel" || path === "organizacion" ? (
+              <OrganizationDashboard />
+            ) : (
+              <PublisherPage />
+            ),
         })),
       },
     ],
@@ -66,10 +74,21 @@ export const router = createBrowserRouter([
         children: [
           "panel",
           "organizaciones",
+          "organizaciones/:id",
           "revisiones",
           "ofertas",
           "usuarios",
-        ].map((path) => ({ path: `/admin/${path}`, element: <AdminPage /> })),
+        ].map((path) => ({
+          path: `/admin/${path}`,
+          element:
+            path === "panel" || path === "organizaciones" ? (
+              <OrganizationsPage />
+            ) : path === "organizaciones/:id" ? (
+              <OrganizationDetailPage />
+            ) : (
+              <AdminPage />
+            ),
+        })),
       },
     ],
   },
