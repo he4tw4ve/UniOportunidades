@@ -40,7 +40,9 @@ for (const file of files) {
   if (/supabase\s*\.\s*(from|rpc)\s*\(/.test(text))
     problems.push(`Consulta directa de negocio en ${file}.`);
 }
-for (const file of tracked.filter((p) => !p.endsWith("package-lock.json"))) {
+for (const file of tracked.filter(
+  (p) => existsSync(p) && !p.endsWith("package-lock.json"),
+)) {
   const text = readFileSync(file, "utf8");
   if (/-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----/.test(text))
     problems.push(`Posible clave privada en ${file}.`);

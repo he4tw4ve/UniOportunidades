@@ -4,15 +4,15 @@ import { Button } from "@/components/ui/button";
 import { login } from "@/lib/apiClient";
 import { supabase } from "@/lib/supabaseClient";
 import { useAuth } from "./AuthProvider";
-export const fieldClass =
-  "mt-1 w-full rounded-lg border border-border bg-white px-3 py-2";
-export function AccessPage() {
+import { fieldClass } from "@/components/ui/field";
+export function AccessPage({ embedded = false }: { embedded?: boolean }) {
   const { auth, error: sessionError, refresh, signOut } = useAuth();
   const [kind, setKind] = useState<"student" | "email">("student");
   const [identifier, setIdentifier] = useState(""),
     [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
+  const Heading = embedded ? "h2" : "h1";
   if (auth.status === "authenticated")
     return (
       <Navigate
@@ -48,8 +48,10 @@ export function AccessPage() {
     }
   }
   return (
-    <section className="mx-auto max-w-xl rounded-2xl border border-border bg-white p-8">
-      <h1 className="text-3xl font-bold text-primary">Iniciar sesión</h1>
+    <section className="auth-form mx-auto max-w-xl rounded-2xl border border-border bg-white p-8">
+      <Heading className="text-2xl font-bold text-primary">
+        Iniciar sesión
+      </Heading>
       <p className="my-4 text-sm">
         Solo cuentas de demostración para estudiantes. Nunca uses tu contraseña
         universitaria real.

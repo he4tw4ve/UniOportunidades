@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Link, useParams, useLocation } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -7,7 +7,7 @@ import {
   QueryMessage,
   formatDate,
 } from "@/components/organizations/OrganizationInfo";
-import { fieldClass } from "@/features/auth/AccessPage";
+import { fieldClass } from "@/components/ui/field";
 import { typeLabels } from "@/lib/organizations";
 import {
   getOffer,
@@ -26,6 +26,7 @@ import {
   getDegrees,
 } from "@/lib/offers";
 import { RevisionForm } from "./RevisionForm";
+import { ConfirmDialog } from "@/components/ui/Dialog";
 export function OfferDetailPage({ admin = false }: { admin?: boolean }) {
   const { id = "" } = useParams(),
     location = useLocation();
@@ -36,9 +37,35 @@ export function OfferDetailPage({ admin = false }: { admin?: boolean }) {
     [error, setError] = useState(""),
     [message, setMessage] = useState<string>(location.state?.message ?? ""),
     [note, setNote] = useState(""),
-    [confirmed, setConfirmed] = useState(false),
-    [correction, setCorrection] = useState(false),
-    [decisionConfirmed, setDecisionConfirmed] = useState(false);
+    [correction, setCorrection] = useState(false);
+  const [operation, setOperation] = useState<{
+    title: string;
+    description: string;
+    work: () => Promise<OfferDetail>;
+    danger?: boolean;
+  } | null>(null);
+  const confirmationLock = useRef(false);
+  function ask(
+    title: string,
+    description: string,
+    work: () => Promise<OfferDetail>,
+    danger = false,
+  ) {
+    setError("");
+    setOperation({ title, description, work, danger });
+  }
+  async function confirmOperation() {
+    if (!operation || confirmationLock.current) return;
+    confirmationLock.current = true;
+    try {
+      await update(operation.work);
+      setOperation(null);
+    } catch {
+      /* Keep the dialog open with the API error. */
+    } finally {
+      confirmationLock.current = false;
+    }
+  }
   const key = ["offers", "detail", profile?.id, admin, id];
   const query = useQuery({
     queryKey: key,
@@ -55,8 +82,6 @@ export function OfferDetailPage({ admin = false }: { admin?: boolean }) {
       setMessage(
         "Cambios guardados. Consulta el estado y el historial actualizados.",
       );
-      setConfirmed(false);
-      setDecisionConfirmed(false);
       setNote("");
       setCorrection(false);
       await cache.invalidateQueries({ queryKey: ["offers"] });
@@ -76,6 +101,16 @@ export function OfferDetailPage({ admin = false }: { admin?: boolean }) {
     pending = offer?.revisiones.find((r) => r.estado_revision === "pending");
   return (
     <div className="space-y-6">
+      <ConfirmDialog
+        open={!!operation}
+        title={operation?.title ?? "Confirmar operación"}
+        description={operation?.description ?? ""}
+        danger={operation?.danger}
+        busy={busy}
+        error={error}
+        onClose={() => setOperation(null)}
+        onConfirm={() => void confirmOperation()}
+      />
       <Link
         className="underline"
         to={admin ? "/admin/ofertas" : "/publicador/ofertas"}
@@ -93,6 +128,7 @@ export function OfferDetailPage({ admin = false }: { admin?: boolean }) {
         Actualizar
       </Button>
       <QueryMessage
+        loadingMessage="Cargando oportunidad y versiones…"
         loading={query.isPending}
         error={query.error}
         retry={() => void query.refetch()}
@@ -102,7 +138,7 @@ export function OfferDetailPage({ admin = false }: { admin?: boolean }) {
           {message}
         </p>
       )}
-      {error && (
+      {error && !operation && (
         <p role="alert" className="rounded-lg bg-red-50 p-4 text-red-900">
           {error}
         </p>
@@ -148,22 +184,16 @@ export function OfferDetailPage({ admin = false }: { admin?: boolean }) {
             </p>
             {offer.estado_operativo !== "archived" && (
               <>
-                <label className="mt-4 flex items-start gap-2">
-                  <input
-                    type="checkbox"
-                    checked={confirmed}
-                    onChange={(e) => setConfirmed(e.target.checked)}
-                  />
-                  Confirmo el cambio de estado o la decisión seleccionada.
-                </label>
                 <div className="mt-4 flex flex-wrap gap-3">
                   <Button
                     variant="outline"
-                    disabled={
-                      !confirmed || busy || offer.estado_operativo === "closed"
-                    }
+                    disabled={busy || offer.estado_operativo === "closed"}
                     onClick={() =>
-                      run(() => changeOfferState(token, offer, admin, "closed"))
+                      ask(
+                        "Cerrar oportunidad",
+                        "Dejará de aparecer en el catálogo. Las versiones y decisiones se conservarán.",
+                        () => changeOfferState(token, offer, admin, "closed"),
+                      )
                     }
                   >
                     Cerrar oportunidad
@@ -171,25 +201,32 @@ export function OfferDetailPage({ admin = false }: { admin?: boolean }) {
                   <Button
                     variant="outline"
                     disabled={
-                      !confirmed ||
                       busy ||
                       offer.estado_operativo === "open" ||
                       !offer.publicada ||
                       !offer.vigente
                     }
                     onClick={() =>
-                      run(() => changeOfferState(token, offer, admin, "open"))
+                      ask(
+                        "Reabrir oportunidad",
+                        "Volverá al catálogo si su publicación está vigente y la organización conserva los permisos requeridos.",
+                        () => changeOfferState(token, offer, admin, "open"),
+                      )
                     }
                   >
                     Reabrir oportunidad
                   </Button>
                   {admin && (
                     <Button
-                      variant="outline"
-                      disabled={!confirmed || busy}
+                      variant="destructive"
+                      disabled={busy}
                       onClick={() =>
-                        run(() =>
-                          changeOfferState(token, offer, true, "archived"),
+                        ask(
+                          "Archivar oportunidad",
+                          "Se retirará del catálogo y no podrá reabrirse en el flujo actual. Su historial se conservará.",
+                          () =>
+                            changeOfferState(token, offer, true, "archived"),
+                          true,
                         )
                       }
                     >
@@ -253,28 +290,29 @@ export function OfferDetailPage({ admin = false }: { admin?: boolean }) {
                   maxLength={3000}
                 />
               </label>
-              <label className="mt-4 flex gap-2">
-                <input
-                  type="checkbox"
-                  checked={decisionConfirmed}
-                  onChange={(e) => setDecisionConfirmed(e.target.checked)}
-                />
-                Confirmo la decisión sobre esta revisión.
-              </label>
               <div className="mt-4 flex flex-wrap gap-3">
                 <Button
-                  disabled={busy || !decisionConfirmed}
+                  disabled={busy}
                   onClick={() =>
-                    run(() => decideRevision(token, pending, "approved", note))
+                    ask(
+                      "Aprobar revisión",
+                      "Esta versión sustituirá a la publicada. La decisión y el historial quedarán registrados.",
+                      () => decideRevision(token, pending, "approved", note),
+                    )
                   }
                 >
                   Aprobar revisión
                 </Button>
                 <Button
                   variant="outline"
-                  disabled={busy || !decisionConfirmed || !note.trim()}
+                  disabled={busy || !note.trim()}
                   onClick={() =>
-                    run(() => decideRevision(token, pending, "rejected", note))
+                    ask(
+                      "Rechazar revisión",
+                      "Se enviará el motivo al historial del publicador. La versión publicada anterior permanecerá intacta.",
+                      () => decideRevision(token, pending, "rejected", note),
+                      true,
+                    )
                   }
                 >
                   Rechazar revisión

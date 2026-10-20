@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import "@/test/dialog";
 import {
   act,
   cleanup,
@@ -150,9 +151,9 @@ describe("Paneles de organizaciones en español", () => {
           name: "Confirmar decisión",
         }) as HTMLButtonElement
       ).disabled,
-    ).toBe(true);
+    ).toBe(false);
     fireEvent.click(screen.getByLabelText("Servicio social"));
-    fireEvent.click(screen.getByLabelText(/Confirmo que revisé/));
+    expect(mocks.decide).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("button", { name: "Confirmar decisión" }));
     await waitFor(() =>
       expect(mocks.decide).toHaveBeenCalledWith("test-token", org.id, {
@@ -168,7 +169,6 @@ describe("Paneles de organizaciones en español", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Rechazar organización" }),
     );
-    fireEvent.click(screen.getByLabelText(/Confirmo que revisé/));
     expect(
       (
         screen.getByRole("button", {
@@ -202,9 +202,10 @@ describe("Paneles de organizaciones en español", () => {
           name: "Guardar permisos",
         }) as HTMLButtonElement
       ).disabled,
-    ).toBe(true);
-    fireEvent.click(screen.getByLabelText(/Confirmo el cambio de permisos/));
+    ).toBe(false);
     fireEvent.click(screen.getByRole("button", { name: "Guardar permisos" }));
+    expect(mocks.permissions).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "Confirmar" }));
     await waitFor(() =>
       expect(mocks.permissions).toHaveBeenCalledWith("test-token", org.id, {
         permisos: ["social_service"],
@@ -220,7 +221,6 @@ describe("Paneles de organizaciones en español", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "Aprobar organización" }),
     );
-    fireEvent.click(screen.getByLabelText(/Confirmo que revisé/));
     fireEvent.click(screen.getByRole("button", { name: "Confirmar decisión" }));
     expect(await screen.findByRole("alert")).toHaveProperty(
       "textContent",

@@ -14,7 +14,7 @@ import {
   formatDate,
 } from "@/components/organizations/OrganizationInfo";
 import { Button } from "@/components/ui/button";
-import { fieldClass } from "@/features/auth/AccessPage";
+import { fieldClass } from "@/components/ui/field";
 export function OrganizationsPage() {
   const { session, profile } = useAuth();
   const [status, setStatus] = useState("pending"),

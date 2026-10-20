@@ -8,16 +8,8 @@ import {
   type OrganizationStatus,
 } from "@/lib/organizations";
 export function StatusBadge({ status }: { status: OrganizationStatus }) {
-  const colors = {
-    pending: "bg-amber-50 text-amber-900",
-    approved: "bg-teal-50 text-teal-900",
-    rejected: "bg-red-50 text-red-900",
-    suspended: "bg-slate-200 text-slate-900",
-  };
   return (
-    <span
-      className={`inline-block rounded-full px-3 py-1 text-sm font-semibold ${colors[status]}`}
-    >
+    <span className={`status-badge status-${status}`}>
       {statusLabels[status]}
     </span>
   );
@@ -26,15 +18,17 @@ export function QueryMessage({
   loading,
   error,
   retry,
+  loadingMessage = "Cargando organizaciones…",
 }: {
   loading?: boolean;
   error?: Error | null;
   retry: () => void;
+  loadingMessage?: string;
 }) {
   if (loading)
     return (
       <p role="status" className="rounded-xl bg-white p-6">
-        Cargando organizaciones…
+        {loadingMessage}
       </p>
     );
   if (error)
@@ -76,7 +70,10 @@ export function OrganizationInfo({ org }: { org: OrganizationDetail }) {
       </dl>
       <div className="mt-6 grid gap-3 sm:grid-cols-2">
         {offerTypes.map((type) => (
-          <div key={type} className="rounded-lg border border-border p-4">
+          <div
+            key={type}
+            className={`permission-card ${org.permisos.includes(type) && org.estado === "approved" ? "is-allowed" : ""}`}
+          >
             <h3 className="font-semibold">{typeLabels[type]}</h3>
             <p className="mt-1 text-sm">
               {org.permisos.includes(type)

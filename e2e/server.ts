@@ -112,6 +112,19 @@ host.get("/auth/v1/user", async (req, res) => {
 host.post("/auth/v1/logout", (_req, res) => {
   res.status(204).end();
 });
+// Simulates the provider's unconfirmed signup response only; never creates an active session.
+host.post("/auth/v1/signup", (_req, res) =>
+  res.json({
+    id: seedId(1999),
+    aud: "authenticated",
+    email: "registro@example.test",
+    role: "authenticated",
+    app_metadata: {},
+    user_metadata: {},
+    identities: [],
+    created_at: "2026-01-01T00:00:00Z",
+  }),
+);
 host.use(
   createApp("http://127.0.0.1:3100", {
     gateway,

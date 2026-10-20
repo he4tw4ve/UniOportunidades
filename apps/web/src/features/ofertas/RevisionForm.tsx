@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { fieldClass } from "@/features/auth/AccessPage";
+import { ConfirmDialog } from "@/components/ui/Dialog";
+import { fieldClass } from "@/components/ui/field";
 import {
   getDegrees,
   contentSchema,
@@ -29,14 +30,22 @@ export function RevisionForm({
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
     [note, setNote] = useState(""),
-    [confirmed, setConfirmed] = useState(false);
+    [correctionInput, setCorrectionInput] = useState<RevisionContent | null>(
+      null,
+    );
   const scope = useWatch({ control, name: "alcance_carreras" });
+  const saving = useRef(false);
   const degrees = useQuery({
     queryKey: ["degrees"],
     queryFn: ({ signal }) => getDegrees(token, signal),
     retry: false,
   });
-  async function persist(input: RevisionContent, submit: boolean) {
+  async function persist(
+    input: RevisionContent,
+    submit: boolean,
+    confirmed = false,
+  ) {
+    if (saving.current) return;
     const parsed = contentSchema.safeParse(input);
     if (!parsed.success) {
       setError(
@@ -70,17 +79,25 @@ export function RevisionForm({
         return;
       }
     }
-    if (correction && (!note.trim() || !confirmed)) {
-      setError("Escribe el motivo y confirma la corrección.");
+    if (correction && !note.trim()) {
+      setError("Escribe el motivo de la corrección.");
       return;
     }
+    if (correction && !confirmed) {
+      setError("");
+      setCorrectionInput(parsed.data);
+      return;
+    }
+    saving.current = true;
     setBusy(true);
     setError("");
     try {
       await onSave(parsed.data, submit, note);
+      setCorrectionInput(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo guardar.");
     } finally {
+      saving.current = false;
       setBusy(false);
     }
   }
@@ -96,8 +113,22 @@ export function RevisionForm({
       aria-busy={busy}
       aria-describedby={error ? "revision-form-error" : undefined}
       className="space-y-5 rounded-xl border border-border bg-white p-6"
-      onSubmit={handleSubmit((data) => persist(data, false))}
+      onSubmit={(event) =>
+        void handleSubmit((data) => persist(data, false))(event)
+      }
     >
+      <ConfirmDialog
+        open={!!correctionInput}
+        title="Crear y aprobar corrección"
+        description="Se creará una nueva versión aprobada con el motivo indicado. La versión anterior y el historial se conservarán y la acción quedará auditada."
+        busy={busy}
+        error={error}
+        onClose={() => setCorrectionInput(null)}
+        onConfirm={() => {
+          if (correctionInput && !busy)
+            void persist(correctionInput, false, true);
+        }}
+      />
       <h2 className="text-xl font-semibold">
         {correction ? "Nueva versión corregida" : "Contenido del borrador"}
       </h2>
@@ -276,18 +307,10 @@ export function RevisionForm({
                 required
               />
             </label>
-            <label className="flex gap-2">
-              <input
-                type="checkbox"
-                checked={confirmed}
-                onChange={(e) => setConfirmed(e.target.checked)}
-              />
-              Confirmo crear y aprobar una nueva versión con auditoría.
-            </label>
           </>
         )}
         <div className="flex flex-wrap gap-3">
-          <Button disabled={busy || (correction && !confirmed)}>
+          <Button disabled={busy || (correction && !note.trim())}>
             {busy
               ? "Guardando…"
               : correction
@@ -306,7 +329,7 @@ export function RevisionForm({
           )}
         </div>
       </fieldset>
-      {error && (
+      {error && !correctionInput && (
         <p
           id="revision-form-error"
           role="alert"

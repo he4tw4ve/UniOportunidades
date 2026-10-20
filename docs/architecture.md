@@ -1,4 +1,6 @@
-# Arquitectura · Fase 5
+# Arquitectura · Fase 6
+
+El rediseño de Fase 6 conserva backend y contratos. CatalogLayout y WorkspaceLayout comparten shell autenticado con navegación por perfil y permisos, cuenta compacta y drawer nativo. Se reutilizan los formularios de Auth dentro de HomePage con sus URLs directas; `/mi-perfil` abre la cuenta mediante redirección compatible. ReviewInbox consume listados existentes y PublisherOverview muestra publicaciones propias. Dialog/ConfirmDialog centralizan foco, Escape, errores y confirmación; las mutaciones siguen validándose exclusivamente en API. Tokens y contraste se documentan en `docs/phase-6-uiux.md`. No hay nuevas dependencias ni cambios del esquema o seed.
 
 Fase 5 añade AdminRepository con indicadores obtenidos en una única consulta SQL parametrizada. Las rutas conservan los guards de sesión/perfil/rol. No cambia modelo ni migraciones. Los indicadores de publicaciones usan las mismas reglas de visibilidad que el catálogo y vencimientos en Hermosillo.
 

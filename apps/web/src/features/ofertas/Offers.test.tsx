@@ -1,10 +1,13 @@
 // @vitest-environment jsdom
+import "@/test/dialog";
 import {
   cleanup,
+  act,
   fireEvent,
   render,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import { beforeEach, afterEach, describe, it, expect, vi } from "vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
@@ -132,6 +135,42 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 describe("Formularios y moderación de oportunidades", () => {
+  it("cancelar no escribe; confirmar bloquea envíos duplicados y cancelación durante la operación", async () => {
+    let finish!: (value: OfferDetail) => void;
+    mocks.state.mockImplementation(
+      () =>
+        new Promise<OfferDetail>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    mount(<OfferDetailPage admin />);
+    const close = await screen.findByRole("button", {
+      name: "Cerrar oportunidad",
+    });
+    fireEvent.click(close);
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Cancelar",
+      }),
+    );
+    expect(mocks.state).not.toHaveBeenCalled();
+    fireEvent.click(close);
+    const confirm = within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Confirmar",
+    });
+    fireEvent.click(confirm);
+    fireEvent.click(confirm);
+    expect(mocks.state).toHaveBeenCalledTimes(1);
+    expect(
+      (
+        within(screen.getByRole("dialog")).getByRole("button", {
+          name: "Cancelar",
+        }) as HTMLButtonElement
+      ).disabled,
+    ).toBe(true);
+    await act(async () => finish({ ...detail, estado_operativo: "closed" }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
   it("impide enviar un borrador incompleto y asocia el error al formulario", async () => {
     const save = vi.fn();
     mount(
@@ -245,16 +284,19 @@ describe("Formularios y moderación de oportunidades", () => {
         name: "Aprobar revisión",
       }),
       reject = screen.getByRole("button", { name: "Rechazar revisión" });
-    expect((approve as HTMLButtonElement).disabled).toBe(true);
-    fireEvent.click(
-      screen.getByLabelText("Confirmo la decisión sobre esta revisión."),
-    );
+    expect((approve as HTMLButtonElement).disabled).toBe(false);
     expect((reject as HTMLButtonElement).disabled).toBe(true);
     fireEvent.change(
       screen.getByLabelText("Nota de revisión (obligatoria para rechazar)"),
       { target: { value: "Completar requisitos" } },
     );
     fireEvent.click(reject);
+    expect(mocks.decide).not.toHaveBeenCalled();
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Confirmar",
+      }),
+    );
     await waitFor(() =>
       expect(mocks.decide).toHaveBeenCalledWith(
         "test-token",
@@ -285,12 +327,14 @@ describe("Formularios y moderación de oportunidades", () => {
       target: { value: "Precisión auditada" },
     });
     fireEvent.click(
-      screen.getByLabelText(
-        "Confirmo crear y aprobar una nueva versión con auditoría.",
-      ),
-    );
-    fireEvent.click(
       screen.getByRole("button", { name: "Crear y aprobar corrección" }),
+    );
+    await screen.findByRole("dialog");
+    expect(save).not.toHaveBeenCalled();
+    fireEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: "Confirmar",
+      }),
     );
     await waitFor(() =>
       expect(save).toHaveBeenCalledWith(content, false, "Precisión auditada"),

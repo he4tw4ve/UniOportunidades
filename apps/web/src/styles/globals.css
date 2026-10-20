@@ -1,11 +1,12 @@
 @import "tailwindcss";
+@import "./design-system.css";
 :root {
-  --primary: #142d4e;
+  --primary: #24398a;
   --primary-foreground: #ffffff;
-  --muted: #edf2f6;
-  --muted-foreground: #526173;
-  --border: #dbe3eb;
-  --background: #f8fafc;
+  --muted: #eaf0f8;
+  --muted-foreground: #536078;
+  --border: #d5deeb;
+  --background: #f2f5fa;
 }
 @theme inline {
   --color-primary: var(--primary);
@@ -21,7 +22,7 @@
     min-width: 360px;
     background: var(--background);
     color: #243447;
-    font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+    font-family: Calibri, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
   }
   a,
   button {
@@ -29,13 +30,13 @@
   }
   a:focus-visible,
   button:focus-visible {
-    outline: 2px solid #0f766e;
+    outline: 2px solid var(--primary);
     outline-offset: 4px;
   }
   input:focus-visible,
   select:focus-visible,
   textarea:focus-visible {
-    outline: 2px solid #0f766e;
+    outline: 2px solid var(--primary);
     outline-offset: 2px;
   }
   input,

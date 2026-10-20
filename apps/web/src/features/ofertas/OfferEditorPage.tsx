@@ -15,7 +15,7 @@ import {
   emptyContent,
   type RevisionContent,
 } from "@/lib/offers";
-import { fieldClass } from "@/features/auth/AccessPage";
+import { fieldClass } from "@/components/ui/field";
 import { OfferDetailPage } from "./OfferDetailPage";
 export function OfferEditorPage() {
   const { id } = useParams();
@@ -32,8 +32,11 @@ function NewOffer() {
     retry: false,
   });
   const org = organization.data;
+  const currentType = org?.permisos.includes(type)
+    ? type
+    : (org?.permisos[0] ?? type);
   async function save(content: RevisionContent, send: boolean) {
-    const data = await createOffer(session!.access_token, type, content);
+    const data = await createOffer(session!.access_token, currentType, content);
     await cache.invalidateQueries({ queryKey: ["offers"] });
     let message = "Borrador guardado.";
     if (send) {
@@ -58,6 +61,7 @@ function NewOffer() {
       </Link>
       <h1 className="text-3xl font-bold text-primary">Nueva oportunidad</h1>
       <QueryMessage
+        loadingMessage="Comprobando organización y permisos…"
         loading={organization.isPending}
         error={organization.error}
         retry={() => void organization.refetch()}
@@ -67,23 +71,29 @@ function NewOffer() {
           Tu organización debe estar aprobada antes de crear borradores.
         </p>
       )}
-      {org?.estado === "approved" && (
+      {org?.estado === "approved" && !org.permisos.length && (
+        <p role="alert">
+          Tu organización está aprobada, pero no tiene permisos de publicación.
+          Contacta a administración.
+        </p>
+      )}
+      {org?.estado === "approved" && org.permisos.length > 0 && (
         <>
           <label className="block">
             Tipo de oportunidad
             <select
               className={fieldClass}
-              value={type}
+              value={currentType}
               onChange={(e) => setType(e.target.value as OfferType)}
             >
-              {Object.entries(typeLabels).map(([v, l]) => (
-                <option key={v} value={v}>
-                  {l}
+              {org.permisos.map((allowed) => (
+                <option key={allowed} value={allowed}>
+                  {typeLabels[allowed]}
                 </option>
               ))}
             </select>
           </label>
-          {!org.permisos.includes(type) ? (
+          {!org.permisos.includes(currentType) ? (
             <p role="alert">
               Tu organización no tiene permiso para este tipo de oportunidad.
             </p>

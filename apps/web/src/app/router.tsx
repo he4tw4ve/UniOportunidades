@@ -1,7 +1,6 @@
 import { createBrowserRouter, Link } from "react-router-dom";
 import { CatalogLayout, WorkspaceLayout } from "@/components/layout/Layouts";
 import { HomePage } from "@/features/catalogo/HomePage";
-import { AccessPage } from "@/features/auth/AccessPage";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { CatalogPage } from "@/features/catalogo/CatalogPage";
 import { OffersListPage } from "@/features/ofertas/OffersListPage";
@@ -11,7 +10,6 @@ import { PublishedOfferPage } from "@/features/ofertas/PublishedOfferPage";
 import { AdminDashboard } from "@/features/admin/AdminDashboard";
 import { UsersPage } from "@/features/admin/UsersPage";
 import { ProfilePage } from "@/features/perfil/ProfilePage";
-import { RegistrationPage } from "@/features/auth/RegistrationPage";
 import { OrganizationDashboard } from "@/features/publicador/OrganizationDashboard";
 import { OrganizationsPage } from "@/features/admin/OrganizationsPage";
 import { OrganizationDetailPage } from "@/features/admin/OrganizationDetailPage";
@@ -26,8 +24,8 @@ export const router = createBrowserRouter([
     ),
     children: [
       { path: "/", element: <HomePage /> },
-      { path: "/iniciar-sesion", element: <AccessPage /> },
-      { path: "/registro-organizacion", element: <RegistrationPage /> },
+      { path: "/iniciar-sesion", element: <HomePage mode="login" /> },
+      { path: "/registro-organizacion", element: <HomePage mode="register" /> },
       {
         element: <ProtectedRoute roles={["student", "publisher", "admin"]} />,
         children: [
@@ -62,7 +60,7 @@ export const router = createBrowserRouter([
           path: `/publicador/${path}`,
           element:
             path === "panel" || path === "organizacion" ? (
-              <OrganizationDashboard />
+              <OrganizationDashboard overview={path === "panel"} />
             ) : path === "ofertas" ? (
               <OffersListPage />
             ) : (

@@ -1,4 +1,4 @@
-# Guion de demostración · Fase 5
+# Guion de demostración · Fase 6
 
 ## Preparación
 
@@ -36,7 +36,7 @@ Las cuentas seed ya están confirmadas. El registro autoservicio con un correo p
 6. Publicador crea una edición, cambia el título y envía. Estudiante sigue viendo el anterior. Admin aprueba; ahora se ve el nuevo, conservando historial.
 7. Cierra la oferta creada para la demo; desaparece del catálogo y permanece en el historial. La exclusión por fecha vencida se prueba automáticamente sin cambiar el reloj ni alterar datos remotos.
 8. Publicador1 no debe acceder a ofertas de otra organización. Estudiante/publicador no acceden a Admin ni conceden permisos. Revisa auditoría y fechas de los cambios anteriores.
-9. Cierra sesión y vuelve a una ruta protegida: solicita acceso. Comprueba también restauración de sesión tras recarga y navegación atrás.
+9. Abre Mi cuenta en el encabezado y cierra sesión; vuelve a una ruta protegida: solicita acceso. Comprueba también restauración de sesión tras recarga y navegación atrás. `/mi-perfil` conserva compatibilidad abriendo la cuenta compacta. Para cambios de estado/decisiones, usa el diálogo de confirmación: no hay casilla previa.
 
 ## Demo automatizada aislada
 
@@ -45,4 +45,4 @@ npm.cmd exec -- playwright install chromium
 npm.cmd run test:e2e
 ```
 
-Playwright inicia web en 3100 y API en 3101, con PostgreSQL embebido efímero y un adaptador Auth exclusivamente de pruebas. No carga `.env` del servidor ni contacta Supabase. Usa el código de UI, rutas, repositorios y seed reales. No sustituye la verificación del proveedor Auth, SMTP o conectividad de tu proyecto. Credenciales y tokens de prueba carecen de acceso a producción. Los puertos deben estar libres. No guarda vídeos, trazas ni capturas con sesiones.
+Playwright inicia web en 3100 y API en 3101, con PostgreSQL embebido efímero y un adaptador Auth exclusivamente de pruebas. No carga `.env` del servidor ni contacta Supabase. Usa el código de UI, rutas, repositorios y seed reales. No sustituye la verificación del proveedor Auth, SMTP o conectividad de tu proyecto. Credenciales y tokens de prueba carecen de acceso a producción. Los puertos deben estar libres. Guarda capturas de UI con datos ficticios aislados para revisión visual bajo `test-results/`; no guarda contraseñas, tokens, vídeos ni trazas.

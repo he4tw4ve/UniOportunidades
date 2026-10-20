@@ -4,6 +4,7 @@ import { z } from "zod";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { apiRequest } from "@/lib/apiClient";
 import { Button } from "@/components/ui/button";
+import { ReviewInbox } from "./ReviewInbox";
 const metricsSchema = z.object({
   ofertas_pendientes: z.number().int().nonnegative(),
   organizaciones_pendientes: z.number().int().nonnegative(),
@@ -61,12 +62,9 @@ export function AdminDashboard() {
       )}
       {query.data && (
         <>
-          <dl className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <dl className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
             {cards.map(([key, label, to]) => (
-              <div
-                key={key}
-                className="rounded-xl border border-border bg-white p-5"
-              >
+              <div key={key} className="metric-card">
                 <dt>
                   <Link className="underline" to={to}>
                     {label}
@@ -94,6 +92,28 @@ export function AdminDashboard() {
           </Button>
         </>
       )}
+      {session && (
+        <ReviewInbox token={session.access_token} userId={profile?.id} />
+      )}
+      <section className="mt-6 rounded-xl bg-navy p-6 text-white">
+        <h2 className="text-lg font-bold">Continúa con lo importante</h2>
+        <p className="mt-2 text-sm text-slate-200">
+          Revisa solicitudes, resuelve versiones pendientes y consulta el
+          historial en cada organización u oportunidad.
+        </p>
+        <div className="mt-5 flex flex-wrap gap-3">
+          <Button variant="outline" asChild>
+            <Link to="/admin/organizaciones" className="text-primary">
+              Revisar organizaciones
+            </Link>
+          </Button>
+          <Button variant="outline" asChild>
+            <Link to="/admin/usuarios" className="text-primary">
+              Consultar usuarios
+            </Link>
+          </Button>
+        </div>
+      </section>
     </section>
   );
 }

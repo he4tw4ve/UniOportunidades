@@ -19,6 +19,7 @@ vi.mock("@/features/auth/AuthProvider", () => ({
   }),
 }));
 vi.mock("@/lib/apiClient", () => ({ apiRequest: mocks.request }));
+vi.mock("./ReviewInbox", () => ({ ReviewInbox: () => null }));
 afterEach(() => {
   cleanup();
   vi.resetAllMocks();
@@ -72,7 +73,7 @@ it("informa error y permite recuperar indicadores", async () => {
 it("anuncia carga mientras los indicadores no responden", () => {
   mocks.request.mockReturnValue(new Promise(() => {}));
   view(<AdminDashboard />);
-  expect(screen.getByRole("status").textContent).toContain("Cargando");
+  expect(screen.getAllByRole("status")[0].textContent).toContain("Cargando");
 });
 it("usuarios muestra roles en español sin controles para cambiarlos", async () => {
   mocks.request.mockResolvedValue([

@@ -8,7 +8,12 @@ import {
   QueryMessage,
 } from "@/components/organizations/OrganizationInfo";
 import { Button } from "@/components/ui/button";
-export function OrganizationDashboard() {
+import { PublisherOverview } from "./PublisherOverview";
+export function OrganizationDashboard({
+  overview = false,
+}: {
+  overview?: boolean;
+}) {
   const { session, profile } = useAuth();
   const query = useQuery({
     queryKey: ["organizations", "mine", profile?.id],
@@ -25,7 +30,7 @@ export function OrganizationDashboard() {
           Área de publicador
         </p>
         <h1 className="mt-2 text-3xl font-bold text-primary">
-          Mi organización y revisión
+          {overview ? "Panel de organización" : "Mi organización y revisión"}
         </h1>
         <p className="mt-3 text-muted-foreground">
           Consulta el estado de tu solicitud y los permisos asignados por
@@ -53,7 +58,7 @@ export function OrganizationDashboard() {
             administración del prototipo para revisar tu perfil.
           </p>
           <Link className="mt-4 inline-block underline" to="/mi-perfil">
-            Ver mi perfil
+            Consultar mi cuenta
           </Link>
         </section>
       )}
@@ -61,7 +66,7 @@ export function OrganizationDashboard() {
         <>
           <div
             role="status"
-            className="rounded-xl border border-teal-200 bg-teal-50 p-5"
+            className={`organization-notice ${org.estado === "approved" && org.permisos.length ? "notice-success" : org.estado === "rejected" ? "notice-error" : "notice-warning"}`}
           >
             {
               {
@@ -78,7 +83,25 @@ export function OrganizationDashboard() {
             }
           </div>
           <OrganizationInfo org={org} />
-          <OrganizationHistory org={org} />
+          {overview && session && (
+            <PublisherOverview
+              token={session.access_token}
+              userId={profile?.id}
+              canPublish={org.estado === "approved" && org.permisos.length > 0}
+            />
+          )}
+          {overview ? (
+            <details className="surface-panel">
+              <summary className="cursor-pointer font-semibold">
+                Historial y auditoría de mi organización
+              </summary>
+              <div className="mt-5">
+                <OrganizationHistory org={org} />
+              </div>
+            </details>
+          ) : (
+            <OrganizationHistory org={org} />
+          )}
           <section className="rounded-xl bg-muted p-5">
             <h2 className="font-semibold">Publicación de oportunidades</h2>
             <p className="mt-2 text-sm">

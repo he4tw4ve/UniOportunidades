@@ -4,7 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
 import { QueryMessage } from "@/components/organizations/OrganizationInfo";
-import { fieldClass } from "@/features/auth/AccessPage";
+import { fieldClass } from "@/components/ui/field";
 import { listOffers, revisionLabels, operatingLabels } from "@/lib/offers";
 import { typeLabels } from "@/lib/organizations";
 export function OffersListPage({
@@ -58,11 +58,13 @@ export function OffersListPage({
               ? "Todas las oportunidades"
               : "Mis oportunidades"}
         </h1>
-        {!admin && (
-          <Button asChild>
-            <Link to="/publicador/ofertas/nueva">Publicar oportunidad</Link>
-          </Button>
-        )}
+        {!admin &&
+          profile?.organizacion?.estado === "approved" &&
+          profile.organizacion.permisos.length > 0 && (
+            <Button asChild>
+              <Link to="/publicador/ofertas/nueva">Publicar oportunidad</Link>
+            </Button>
+          )}
       </header>
       <form
         className="flex flex-wrap items-end gap-3 rounded-xl bg-white p-5"
@@ -127,6 +129,7 @@ export function OffersListPage({
         </Button>
       </form>
       <QueryMessage
+        loadingMessage="Cargando oportunidades…"
         loading={query.isPending}
         error={query.error}
         retry={() => void query.refetch()}

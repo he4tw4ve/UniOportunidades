@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useRef, useState, type FormEvent } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/AuthProvider";
@@ -18,7 +18,8 @@ import {
   QueryMessage,
 } from "@/components/organizations/OrganizationInfo";
 import { Button } from "@/components/ui/button";
-import { fieldClass } from "@/features/auth/AccessPage";
+import { fieldClass } from "@/components/ui/field";
+import { Dialog, ConfirmDialog } from "@/components/ui/Dialog";
 export function OrganizationDetailPage() {
   const { id = "" } = useParams();
   const { session, profile } = useAuth();
@@ -81,12 +82,13 @@ export function OrganizationActions({
   onSaved?: () => void;
 }) {
   const cache = useQueryClient();
+  const mutationLock = useRef(false);
   const [action, setAction] = useState<OrganizationDecision["decision"] | null>(
       null,
     ),
     [note, setNote] = useState(""),
     [permissions, setPermissions] = useState<OfferType[]>(org.permisos),
-    [confirmed, setConfirmed] = useState(false),
+    [permissionsOpen, setPermissionsOpen] = useState(false),
     [success, setSuccess] = useState("");
   const mutation = useMutation({
     mutationFn: (
@@ -102,7 +104,7 @@ export function OrganizationActions({
         : setOrganizationPermissions(token, org.id, input.body),
     onSuccess: async () => {
       setAction(null);
-      setConfirmed(false);
+      setPermissionsOpen(false);
       setSuccess(
         "Cambios guardados. El historial y los permisos se actualizaron.",
       );
@@ -110,6 +112,17 @@ export function OrganizationActions({
       await cache.invalidateQueries({ queryKey: ["organizations"] });
     },
   });
+  async function save(input: Parameters<typeof mutation.mutate>[0]) {
+    if (mutationLock.current) return;
+    mutationLock.current = true;
+    try {
+      await mutation.mutateAsync(input);
+    } catch {
+      /* Mutation state displays the API error in the dialog. */
+    } finally {
+      mutationLock.current = false;
+    }
+  }
   function toggle(type: OfferType) {
     setPermissions((current) =>
       current.includes(type)
@@ -120,7 +133,7 @@ export function OrganizationActions({
   function submit(event: FormEvent) {
     event.preventDefault();
     if (action)
-      mutation.mutate({
+      void save({
         kind: "decision",
         body: {
           decision: action,
@@ -144,7 +157,7 @@ export function OrganizationActions({
           {success}
         </p>
       )}
-      {mutation.error && (
+      {mutation.error && !action && !permissionsOpen && (
         <div className="mt-4 rounded-lg bg-red-50 p-4" role="alert">
           <p>{mutation.error.message}</p>
           <p className="mt-2 text-sm">
@@ -161,7 +174,6 @@ export function OrganizationActions({
               disabled={mutation.isPending}
               onClick={() => {
                 setAction("approved");
-                setConfirmed(false);
                 mutation.reset();
               }}
             >
@@ -173,7 +185,6 @@ export function OrganizationActions({
               disabled={mutation.isPending}
               onClick={() => {
                 setAction("rejected");
-                setConfirmed(false);
                 mutation.reset();
               }}
             >
@@ -188,7 +199,6 @@ export function OrganizationActions({
             disabled={mutation.isPending}
             onClick={() => {
               setAction("suspended");
-              setConfirmed(false);
               mutation.reset();
             }}
           >
@@ -197,65 +207,72 @@ export function OrganizationActions({
         )}
       </div>
       {action && (
-        <form
-          onSubmit={submit}
-          className="mt-5 space-y-4 rounded-xl border border-border p-4"
-        >
-          <h3 className="font-semibold">
-            {action === "approved"
+        <Dialog
+          open={!!action}
+          title={
+            action === "approved"
               ? "Confirmar aprobación"
               : action === "rejected"
                 ? "Confirmar rechazo"
-                : "Confirmar suspensión"}
-          </h3>
-          <label className="block">
-            {action === "approved"
-              ? "Nota de revisión (opcional)"
-              : "Motivo (obligatorio)"}
-            <textarea
-              className={fieldClass}
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              required={action !== "approved"}
-              maxLength={3000}
-            />
-          </label>
-          {action === "approved" && (
-            <PermissionsFields selected={permissions} toggle={toggle} />
-          )}
-          <label className="flex items-start gap-2">
-            <input
-              className="mt-1"
-              type="checkbox"
-              checked={confirmed}
-              onChange={(e) => setConfirmed(e.target.checked)}
-              required
-            />
-            Confirmo que revisé la organización y deseo aplicar esta decisión.
-          </label>
-          <div className="flex flex-wrap gap-3">
-            <Button
-              disabled={
-                mutation.isPending ||
-                !confirmed ||
-                (action !== "approved" && !note.trim())
-              }
-            >
-              {mutation.isPending ? "Guardando…" : "Confirmar decisión"}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={mutation.isPending}
-              onClick={() => {
-                setAction(null);
-                setPermissions(org.permisos);
-              }}
-            >
-              Cancelar
-            </Button>
-          </div>
-        </form>
+                : "Confirmar suspensión"
+          }
+          busy={mutation.isPending}
+          onClose={() => setAction(null)}
+        >
+          <form
+            onSubmit={submit}
+            className="mt-5 space-y-4 rounded-xl border border-border p-4"
+          >
+            <p className="text-sm text-muted-foreground">
+              {action === "approved"
+                ? "La organización quedará aprobada con los permisos seleccionados. Sus ofertas seguirán requiriendo revisión."
+                : action === "rejected"
+                  ? "La solicitud quedará rechazada con el motivo indicado. Se conservará su historial."
+                  : "La organización no podrá publicar y sus ofertas dejarán de aparecer en el catálogo. Se conservará el historial."}
+            </p>
+            {mutation.error && (
+              <p role="alert" className="feedback-error">
+                {mutation.error.message}
+              </p>
+            )}
+            <label className="block">
+              {action === "approved"
+                ? "Nota de revisión (opcional)"
+                : "Motivo (obligatorio)"}
+              <textarea
+                className={fieldClass}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                required={action !== "approved"}
+                maxLength={3000}
+              />
+            </label>
+            {action === "approved" && (
+              <PermissionsFields selected={permissions} toggle={toggle} />
+            )}
+            <div className="flex flex-wrap gap-3">
+              <Button
+                variant={action === "approved" ? "default" : "destructive"}
+                disabled={
+                  mutation.isPending || (action !== "approved" && !note.trim())
+                }
+              >
+                {mutation.isPending ? "Guardando…" : "Confirmar decisión"}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={mutation.isPending}
+                onClick={() => {
+                  setAction(null);
+                  setPermissions(org.permisos);
+                }}
+              >
+                Cancelar
+              </Button>
+            </div>
+          </form>
+        </Dialog>
       )}
       {!action && (
         <div className="mt-6 space-y-4">
@@ -272,29 +289,33 @@ export function OrganizationActions({
               puedes revocar permisos existentes.
             </p>
           )}
-          <label className="flex items-start gap-2">
-            <input
-              className="mt-1"
-              type="checkbox"
-              checked={confirmed}
-              onChange={(e) => setConfirmed(e.target.checked)}
-            />
-            Confirmo el cambio de permisos seleccionado.
-          </label>
           <Button
             type="button"
-            disabled={!changed || !confirmed || mutation.isPending}
-            onClick={() =>
-              mutation.mutate({
-                kind: "permissions",
-                body: { permisos: permissions, version: org.version },
-              })
-            }
+            disabled={!changed || mutation.isPending}
+            onClick={() => {
+              mutation.reset();
+              setPermissionsOpen(true);
+            }}
           >
             {mutation.isPending ? "Guardando…" : "Guardar permisos"}
           </Button>
         </div>
       )}
+      <ConfirmDialog
+        open={permissionsOpen}
+        title="Guardar permisos"
+        description={`La organización podrá publicar los tipos seleccionados: ${permissions.map((p) => typeLabels[p]).join(", ") || "ninguno"}. Las ofertas ya publicadas conservan sus reglas de visibilidad. El cambio quedará auditado.`}
+        busy={mutation.isPending}
+        error={mutation.error?.message}
+        onClose={() => setPermissionsOpen(false)}
+        onConfirm={() => {
+          if (!mutation.isPending)
+            void save({
+              kind: "permissions",
+              body: { permisos: permissions, version: org.version },
+            });
+        }}
+      />
       {(org.estado === "rejected" || org.estado === "suspended") && (
         <p className="mt-5 text-sm text-muted-foreground">
           Este estado no admite reactivación en el flujo actual. No se aprobará

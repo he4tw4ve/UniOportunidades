@@ -1,6 +1,8 @@
-# UniOportunidades · Fase 5
+# UniOportunidades · Fase 6
 
 Prototipo académico independiente, en español y sin integración oficial con UNISON. Implementa autenticación Supabase, organizaciones y permisos, borradores y versiones de oportunidades, envío y moderación, cierre/reapertura/archivo y correcciones administrativas auditadas. Nunca uses contraseñas universitarias reales.
+
+Fase 6 incorpora sidebar por rol con drawer móvil, menú de cuenta, landing con acceso/registro integrados y dashboards operativos. Conserva catálogo, rutas, permisos y reglas de negocio. Revisa [decisiones visuales, pruebas y verificación manual](docs/phase-6-uiux.md). No requiere migraciones ni nuevas variables.
 
 ## Preparar y ejecutar
 
@@ -55,10 +57,10 @@ Build compila API y web, incluido el código de migración/seed del servidor. Te
 
 ## Comprobación manual con Supabase configurado
 
-1. Inicia sesión como cada estudiante con expediente DEMO; abre Mi perfil, comprueba su carrera ficticia y recarga la página.
+1. Inicia sesión como cada estudiante con expediente DEMO; abre Mi cuenta, comprueba su carrera ficticia y recarga la página.
 2. Inicia sesión por correo como publicador y administrador; comprueba rol, organización y área correspondiente. No hay selector de roles.
 3. Con estudiante, intenta `/admin/panel` y `/publicador/panel`: acceso restringido. Las APIs administrativas responden 403 aunque manipules el navegador.
-4. Cierra sesión y verifica que ya no puedes acceder a Mi perfil.
+4. Cierra sesión desde Mi cuenta y verifica que las rutas protegidas vuelvan a solicitar acceso.
 5. Para alta nueva usa un correo propio con SMTP configurado: confirma el correo, inicia sesión y completa la organización. Queda pendiente, sin permisos. Reintentar el POST no duplica el perfil.
 
 ## Alcance y documentación

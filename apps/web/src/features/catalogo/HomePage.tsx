@@ -1,139 +1,204 @@
-import { Link } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { Link, Navigate, useLocation } from "react-router-dom";
 import {
   ArrowRight,
-  BookOpen,
+  GraduationCap,
+  Building2,
+  HeartHandshake,
   BriefcaseBusiness,
   ShieldCheck,
 } from "lucide-react";
+import { AccessPage } from "@/features/auth/AccessPage";
+import { RegistrationPage } from "@/features/auth/RegistrationPage";
+import { useAuth } from "@/features/auth/AuthProvider";
+import { areaHome } from "@/components/layout/navigation";
 import { Button } from "@/components/ui/button";
-import { getHealth } from "@/lib/apiClient";
-import { environment } from "@/lib/env";
-export function HomePage() {
-  const health = useQuery({
-    queryKey: ["health"],
-    queryFn: ({ signal }) => getHealth(signal),
-    retry: false,
-  });
+export function HomePage({ mode = "login" }: { mode?: "login" | "register" }) {
+  const { auth, profile } = useAuth(),
+    location = useLocation();
+  useEffect(() => {
+    const target =
+      location.hash.slice(1) || (location.pathname !== "/" ? "acceso" : "");
+    if (target)
+      document.getElementById(target)?.scrollIntoView?.({ behavior: "auto" });
+  }, [location.hash, location.pathname]);
+  const authenticated = auth.status === "authenticated";
+  if (authenticated && location.pathname === "/iniciar-sesion")
+    return <Navigate to={areaHome(profile?.rol)} replace />;
   return (
     <>
-      <div
-        className="mb-10 rounded-xl border border-teal-200 bg-teal-50 p-4 text-sm text-teal-950"
-        role="status"
-      >
-        <strong>Prototipo funcional · Fase 5.</strong> Explora oportunidades
-        vigentes de servicio social y prácticas profesionales, con búsqueda,
-        filtros y contacto directo con las organizaciones.
-      </div>
-      <section className="grid items-center gap-10 py-6 md:grid-cols-[1.4fr_1fr]">
-        <div>
-          <p className="mb-4 text-xs font-bold uppercase tracking-[.2em] text-teal-800">
-            Tu formación, en acción
-          </p>
-          <h1 className="max-w-2xl text-4xl leading-tight font-bold tracking-tight text-primary md:text-6xl">
-            Un espacio para encontrar tu próxima oportunidad.
+      <section className="landing-hero" aria-labelledby="landing-title">
+        <div className="landing-copy">
+          <p className="eyebrow">Tu formación, en acción</p>
+          <h1 id="landing-title">
+            El siguiente paso
+            <br />
+            de tu aprendizaje
+            <br />
+            <em>empieza aquí.</em>
           </h1>
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-muted-foreground">
-            Servicio social y prácticas profesionales para estudiantes de la
-            Universidad de Sonora. Consulta oportunidades y conoce cómo
-            contactar a las organizaciones.
+          <p className="lead">
+            Un espacio para estudiantes de la Universidad de Sonora que buscan
+            servicio social y prácticas profesionales. Encuentra oportunidades y
+            conecta con las organizaciones mediante su contacto externo.
           </p>
-          <div className="mt-8 flex flex-wrap gap-3">
+          <div className="mt-6 flex flex-wrap gap-3">
             <Button asChild>
-              <Link to="/ofertas">
-                Explorar catálogo <ArrowRight size={16} aria-hidden="true" />
+              <Link
+                to={
+                  authenticated
+                    ? areaHome(profile?.rol)
+                    : "/iniciar-sesion#acceso"
+                }
+              >
+                {authenticated
+                  ? "Entrar a mi espacio"
+                  : "Acceder a las oportunidades"}
+                <ArrowRight size={17} aria-hidden="true" />
               </Link>
             </Button>
             <Button asChild variant="outline">
-              <Link to="/registro-organizacion">Soy una organización</Link>
+              <a href="#como-funciona">Conocer cómo funciona</a>
             </Button>
           </div>
+          <p className="landing-note">
+            Prototipo académico independiente. No es un servicio oficial ni
+            utiliza las contraseñas del portal universitario. El catálogo
+            requiere iniciar sesión.
+          </p>
         </div>
-        <div className="rounded-3xl bg-primary p-8 text-white">
-          <GraduationIllustration />
-          <p className="mt-8 text-xs uppercase tracking-widest text-teal-200">
-            Aprender · Colaborar · Crecer
-          </p>
-          <h2 className="mt-3 text-2xl font-semibold">
-            Conecta tu aprendizaje con la comunidad.
-          </h2>
-          <p className="mt-4 leading-relaxed text-slate-200">
-            Un portal de consulta, publicación y revisión. El contacto con cada
-            organización será externo.
-          </p>
+        <div id="acceso" className="access-panel">
+          {authenticated ? (
+            <div className="p-7">
+              <p className="eyebrow">Tu espacio está listo</p>
+              <h2 className="mt-3 text-2xl font-bold">
+                Hola, {profile?.nombre_completo}
+              </h2>
+              <p className="mt-4 text-muted-foreground">
+                Continúa en tu área o explora las oportunidades publicadas.
+              </p>
+              <Button className="mt-6" asChild>
+                <Link to={areaHome(profile?.rol)}>Abrir mi área</Link>
+              </Button>
+              <Link className="mt-5 block underline" to="/ofertas">
+                Explorar oportunidades
+              </Link>
+            </div>
+          ) : (
+            <>
+              <nav
+                className="access-panel-tabs"
+                aria-label="Acceso a UniOportunidades"
+              >
+                <Link
+                  to="/iniciar-sesion#acceso"
+                  aria-current={mode === "login" ? "page" : undefined}
+                >
+                  Ingresar
+                </Link>
+                <Link
+                  to="/registro-organizacion#acceso"
+                  aria-current={mode === "register" ? "page" : undefined}
+                >
+                  Registrar organización
+                </Link>
+              </nav>
+              {mode === "register" ? (
+                <RegistrationPage embedded />
+              ) : (
+                <AccessPage embedded />
+              )}
+            </>
+          )}
         </div>
       </section>
       <section
-        aria-label="áreas del portal"
-        className="my-12 grid gap-5 md:grid-cols-3"
+        id="como-funciona"
+        className="landing-paths"
+        aria-label="Cómo funciona UniOportunidades"
       >
-        {[
-          {
-            Icon: BookOpen,
-            title: "Servicio social",
-            text: "Proyectos para aportar tus conocimientos a la comunidad.",
-          },
-          {
-            Icon: BriefcaseBusiness,
-            title: "Prácticas profesionales",
-            text: "Experiencias para acercarte al entorno profesional.",
-          },
-          {
-            Icon: ShieldCheck,
-            title: "Publicación con revisión",
-            text: "Organizaciones y oportunidades sujetas a revisión administrativa.",
-          },
-        ].map(({ Icon, title, text }) => (
-          <article
-            className="rounded-xl border border-border bg-white p-6"
-            key={title}
+        <article className="landing-path">
+          <GraduationCap size={28} aria-hidden="true" />
+          <h2>Estudiantes: explora con dirección</h2>
+          <p>
+            Empieza por las oportunidades relacionadas con tu carrera y amplía
+            la búsqueda cuando lo necesites.
+          </p>
+          <ol>
+            <li>Ingresa con tu expediente y contraseña de demostración.</li>
+            <li>Combina carrera, tipo, modalidad y ubicación.</li>
+            <li>
+              Consulta requisitos y contacta a la organización fuera de la
+              plataforma.
+            </li>
+          </ol>
+          <p>
+            No hay registro público de estudiantes; el prototipo utiliza cuentas
+            precreadas.
+          </p>
+          <Link to={authenticated ? "/ofertas" : "/iniciar-sesion#acceso"}>
+            {authenticated ? "Ir al catálogo" : "Entrar como estudiante"} →
+          </Link>
+        </article>
+        <article className="landing-path">
+          <Building2 size={28} className="text-primary" aria-hidden="true" />
+          <h2>Organizaciones: comparte oportunidades</h2>
+          <p>
+            Da a conocer proyectos y experiencias formativas mediante un proceso
+            de publicación revisado.
+          </p>
+          <ol>
+            <li>Registra tu cuenta y confirma tu correo electrónico.</li>
+            <li>
+              Completa la solicitud de tu organización y espera su aprobación.
+            </li>
+            <li>
+              Publica dentro de los tipos autorizados; cada oferta pasa por
+              revisión.
+            </li>
+          </ol>
+          <p>
+            La aprobación del prototipo no equivale a una verificación legal ni
+            a acreditación universitaria.
+          </p>
+          <Link
+            to={
+              authenticated
+                ? areaHome(profile?.rol)
+                : "/registro-organizacion#acceso"
+            }
           >
-            <Icon className="text-teal-700" aria-hidden="true" />
-            <h2 className="mt-4 font-semibold text-primary">{title}</h2>
-            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-              {text}
-            </p>
-          </article>
-        ))}
+            {authenticated ? "Ir a mi espacio" : "Registrar mi organización"} →
+          </Link>
+        </article>
       </section>
-      <section className="rounded-xl border border-border bg-white p-6">
-        <h2 className="font-semibold">Estado del prototipo</h2>
-        <p className="mt-2 text-sm" role="status">
-          {!environment.success
-            ? "Configuración inválida: revisa apps/web/.env con el archivo de ejemplo."
-            : health.isPending
-              ? "Consultando API…"
-              : health.isError
-                ? health.error.message
-                : health.data?.authentication === "configured" &&
-                    health.data.database === "available"
-                  ? "API y PostgreSQL disponibles. Autenticación configurada."
-                  : "API disponible. Falta configurar Supabase y PostgreSQL en el servidor."}
-        </p>
-        {health.isError && (
-          <Button
-            className="mt-3"
-            variant="outline"
-            onClick={() => void health.refetch()}
-          >
-            Reintentar conexión
-          </Button>
-        )}
-        <p className="mt-3 text-sm text-muted-foreground">
-          Las cuentas estudiantiles son ficticias. Nunca uses tu contraseña
-          universitaria real.
-        </p>
+      <section className="landing-types" aria-label="Oportunidades y revisión">
+        <div>
+          <HeartHandshake size={23} aria-hidden="true" />
+          <h3 className="mt-3">Servicio social</h3>
+          <p>
+            Proyectos para aportar conocimientos a la comunidad. Consulta las
+            actividades y condiciones de cada oportunidad.
+          </p>
+        </div>
+        <div>
+          <BriefcaseBusiness size={23} aria-hidden="true" />
+          <h3 className="mt-3">Prácticas profesionales</h3>
+          <p>
+            Experiencias para acercarte al entorno profesional y desarrollar
+            habilidades en una organización.
+          </p>
+        </div>
+        <div>
+          <ShieldCheck size={23} aria-hidden="true" />
+          <h3 className="mt-3">Información revisada</h3>
+          <p>
+            Administración revisa organizaciones y versiones antes de
+            publicarlas. Aquí consultas información; no gestionas postulaciones
+            ni horas acreditadas.
+          </p>
+        </div>
       </section>
     </>
-  );
-}
-function GraduationIllustration() {
-  return (
-    <div aria-hidden="true" className="flex h-32 items-end gap-4">
-      <div className="h-16 w-12 rounded-t-lg bg-teal-600" />
-      <div className="h-24 w-12 rounded-t-lg bg-teal-400" />
-      <div className="h-32 w-12 rounded-t-lg bg-teal-200" />
-      <ArrowRight size={40} className="mb-3 text-teal-200" />
-    </div>
   );
 }

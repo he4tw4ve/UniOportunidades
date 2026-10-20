@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/lib/supabaseClient";
 import { registerOrganization, registrationSchema } from "@/lib/apiClient";
 import { useAuth } from "./AuthProvider";
-import { fieldClass } from "./AccessPage";
-export function RegistrationPage() {
+import { fieldClass } from "@/components/ui/field";
+export function RegistrationPage({ embedded = false }: { embedded?: boolean }) {
   const { auth, session, refresh, error: sessionError, signOut } = useAuth();
   const [busy, setBusy] = useState(false),
     [message, setMessage] = useState(""),
@@ -56,11 +56,12 @@ export function RegistrationPage() {
     }
   }
   const onboarding = auth.status === "onboarding";
+  const Heading = embedded ? "h2" : "h1";
   return (
-    <section className="mx-auto max-w-xl rounded-2xl border border-border bg-white p-8">
-      <h1 className="text-3xl font-bold text-primary">
+    <section className="auth-form mx-auto max-w-xl rounded-2xl border border-border bg-white p-8">
+      <Heading className="text-2xl font-bold text-primary">
         Registro de organización
-      </h1>
+      </Heading>
       <p className="my-4">
         Primero confirma tu correo; después completa la solicitud. Solo el
         administrador asigna permisos de publicación.

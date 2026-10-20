@@ -137,7 +137,7 @@ export function CatalogPage() {
           aria-hidden="true"
         />
         <div className="relative max-w-3xl">
-          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-teal-200">
+          <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-[.18em] text-accent">
             <Compass size={16} aria-hidden="true" />
             Explora tu siguiente paso
           </p>
@@ -166,14 +166,17 @@ export function CatalogPage() {
               <span className="sr-only">Buscar oportunidades</span>
               <input
                 type="search"
-                className="min-w-0 w-full rounded-md bg-white py-3 text-sm text-slate-900 outline-none focus-visible:outline-2 focus-visible:outline-teal-700"
+                className="min-w-0 w-full rounded-md bg-white py-3 text-sm text-slate-900 outline-none focus-visible:outline-2 focus-visible:outline-primary"
                 placeholder="Título, palabra clave u organización"
                 name="q"
                 defaultValue={params.get("q") ?? ""}
                 maxLength={150}
               />
             </label>
-            <Button type="submit" className="bg-teal-700 hover:bg-teal-800">
+            <Button
+              type="submit"
+              className="bg-accent text-navy hover:bg-accent/90"
+            >
               Buscar oportunidades
               <ArrowRight size={16} aria-hidden="true" />
             </Button>
@@ -423,7 +426,7 @@ export function CatalogPage() {
               className="font-semibold text-primary underline"
               to="/mi-perfil"
             >
-              Mi perfil y carrera
+              Mi cuenta y carrera
             </Link>
           </p>
         </section>
