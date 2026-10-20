@@ -100,6 +100,12 @@ describe("Migración y repositorios sobre PostgreSQL embebido", () => {
     expect(await count("organizaciones")).toBe(3);
     expect(await count("ofertas")).toBe(8);
     expect(await count("revisiones_oferta")).toBe(10);
+    const pendingSeed = await db.query<{ contacto_instrucciones: string }>(
+      "SELECT contacto_instrucciones FROM public.revisiones_oferta WHERE estado_revision='pending'",
+    );
+    expect(
+      pendingSeed.rows[0].contacto_instrucciones?.trim().length,
+    ).toBeGreaterThan(0);
     await db.query(
       "DELETE FROM public.permisos_organizacion WHERE organizacion_id=$1",
       [seedId(21)],

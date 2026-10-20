@@ -4,7 +4,10 @@ import { HomePage } from "@/features/catalogo/HomePage";
 import { AccessPage } from "@/features/auth/AccessPage";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
 import { PendingPage as CatalogPage } from "@/features/catalogo/PendingPage";
-import { PendingPage as PublisherPage } from "@/features/publicador/PendingPage";
+import { OffersListPage } from "@/features/ofertas/OffersListPage";
+import { OfferEditorPage } from "@/features/ofertas/OfferEditorPage";
+import { OfferDetailPage } from "@/features/ofertas/OfferDetailPage";
+import { PublishedOfferPage } from "@/features/ofertas/PublishedOfferPage";
 import { PendingPage as AdminPage } from "@/features/admin/PendingPage";
 import { ProfilePage } from "@/features/perfil/ProfilePage";
 import { RegistrationPage } from "@/features/auth/RegistrationPage";
@@ -28,7 +31,7 @@ export const router = createBrowserRouter([
         element: <ProtectedRoute roles={["student", "publisher", "admin"]} />,
         children: [
           { path: "/ofertas", element: <CatalogPage /> },
-          { path: "/ofertas/:id", element: <CatalogPage /> },
+          { path: "/ofertas/:id", element: <PublishedOfferPage /> },
           { path: "/mi-perfil", element: <ProfilePage /> },
         ],
       },
@@ -59,8 +62,10 @@ export const router = createBrowserRouter([
           element:
             path === "panel" || path === "organizacion" ? (
               <OrganizationDashboard />
+            ) : path === "ofertas" ? (
+              <OffersListPage />
             ) : (
-              <PublisherPage />
+              <OfferEditorPage />
             ),
         })),
       },
@@ -77,6 +82,7 @@ export const router = createBrowserRouter([
           "organizaciones/:id",
           "revisiones",
           "ofertas",
+          "ofertas/:id",
           "usuarios",
         ].map((path) => ({
           path: `/admin/${path}`,
@@ -85,6 +91,12 @@ export const router = createBrowserRouter([
               <OrganizationsPage />
             ) : path === "organizaciones/:id" ? (
               <OrganizationDetailPage />
+            ) : path === "revisiones" ? (
+              <OffersListPage admin queue />
+            ) : path === "ofertas" ? (
+              <OffersListPage admin />
+            ) : path === "ofertas/:id" ? (
+              <OfferDetailPage admin />
             ) : (
               <AdminPage />
             ),

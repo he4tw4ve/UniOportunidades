@@ -1,4 +1,4 @@
-# Arquitectura · Fase 2
+# Arquitectura · Fase 3
 
 React usa Supabase exclusivamente para Auth. Las consultas de negocio van a Express con Bearer token. Express verifica cada identidad mediante `getUser(token)` y consulta `perfiles`/membresía/permisos en PostgreSQL con `pg`. Ni el rol del JWT/metadata ni un header/body elegido por cliente autoriza operaciones. El cliente web solo presenta el rol obtenido de `/auth/yo`; los guards visuales complementan la autorización real del servidor.
 
@@ -28,8 +28,20 @@ Supertest prueba HTTP real con gateway Auth simulado; PostgreSQL embebido ejecut
 
 Las decisiones y reemplazos de permisos bloquean la fila de organización con `FOR UPDATE`. La versión opaca se compara dentro del bloqueo para impedir sobrescrituras concurrentes. Las decisiones insertan `revisiones_organizacion`; las decisiones y los cambios de permisos insertan `eventos_auditoria`. Un fallo revierte todos los cambios. La versión proviene de `updated_at` existente: no hay nueva migración.
 
-La comprobación de publicación deriva membresía, estado y permisos del servidor. Se vuelve a leer el conjunto de permisos después de adquirir el bloqueo para observar revocaciones que hayan terminado mientras esperaba. Por ahora el endpoint retorna 501 si la organización cumple los requisitos: crear ofertas es Fase 3. Ese futuro flujo debe comprobar la elegibilidad bajo el mismo bloqueo/transacción que la escritura, para no introducir una carrera entre validar y publicar.
+La comprobación de publicación deriva membresía, estado y permisos del servidor. Se vuelve a leer el conjunto de permisos después de adquirir el bloqueo para observar revocaciones que hayan terminado mientras esperaba. La creación/envío de Fase 3 comprueba elegibilidad bajo el mismo bloqueo y transacción que la escritura, para impedir carreras entre validar y publicar.
 
 Las lecturas de detalle/historial usan snapshot repetible de solo lectura. El listado está paginado y filtrado por parámetros SQL. El panel publicador se actualiza al recuperar foco, cada 30 segundos o manualmente; muestra organización, permisos, decisiones y auditoría propios. La UI administrativa exige confirmar las mutaciones y presenta estados de carga, vacío, error y conflicto; no concede permisos por estado visual ni ofrece reactivaciones no previstas.
 
-Catálogo, CRUD de ofertas y moderación de revisiones quedan pendientes. No se ejecutaron comandos de migración/seed ni mutaciones en servicios remotos durante Fase 2.
+## Ofertas en Fase 3
+
+`OffersRepository` implementa ofertas, versiones, carreras por revisión y decisiones finales usando el esquema existente. No se añade migración, columna o política RLS. La parte nueva del router usa los guards de Auth/roles existentes y valida todos los cuerpos con Zod.
+
+Cada escritura vuelve a comprobar perfil activo/rol, obtiene la organización de la membresía o de la oferta, bloquea organización y después oferta y comprueba permisos dentro de la transacción. Este orden es compatible con los bloqueos de revisión/permisos de organizaciones. Los cambios que esperan un bloqueo releen revisiones y permisos después de adquirirlo. La versión opaca y el índice único de revisiones abiertas impiden sobrescrituras y borradores paralelos; la restricción de dictamen único impide dos decisiones finales.
+
+Las revisiones usan un token opaco construido con timestamps existentes y xmin (versión MVCC del registro). Permite detectar escrituras concurrentes sin cambiar el modelo. El cliente no reconstruye ni interpreta el token. Guardar modifica únicamente draft. Enviar congela pending. Aprobar registra dictamen, estado approved y puntero publicado en una transacción, con auditoría. Rechazar no altera el puntero anterior.
+
+La lectura del detalle visible une exclusivamente ofertas.revision_publicada_id con una revisión approved de esa oferta, estado open, organización approved y fecha vigente según el día de Hermosillo. No usa MAX(numero_version) ni la última revisión para contenido público. Es el mínimo necesario para verificar la publicación en Fase 3; el catálogo con filtros/personalización/paginación es Fase 4.
+
+Las correcciones de administrador crean una revisión nueva y pasan por el mismo flujo interno de aprobación, dentro de una transacción con auditoría adicional. Se rechazan si hay draft/pending para no borrar ni sustituir trabajo abierto. Cierre y archivo conservan historia; solo la publicación inicial abre una oferta automáticamente. Los fallos de dictamen/auditoría revierten toda la operación.
+
+Las pruebas usan HTTP Supertest y PostgreSQL embebido, incluido el esquema completo, más React/jsdom. Se prueban doble decisión, revisión paralela, guardados desactualizados, propiedad, permiso revocado, suspensión, vigencia local, cierre, archivo y rollback. No se ejecutaron migraciones/seed ni escrituras en Supabase remoto durante Fase 3.

@@ -13,6 +13,8 @@ import {
 } from "../../middleware/authenticate.js";
 import { authLimiter } from "../../middleware/limiter.js";
 import { AppError } from "../../shared/errors.js";
+import type { OffersRepository } from "../../db/offersRepository.js";
+import { publisherOffersRouter, adminOffersRouter } from "../offers/router.js";
 import {
   adminOrganizationsRouter,
   publicationGuardRouter,
@@ -24,6 +26,7 @@ export interface AuthDependencies {
   profiles: Pick<ProfilesRepository, "findById" | "list">;
   organizations: Pick<OrganizationsRepository, "register">;
   organizationManagement?: OrganizationManagement;
+  offers?: OffersRepository;
 }
 export function authRoutes(deps: AuthDependencies) {
   const router = Router();
@@ -96,6 +99,7 @@ export function authRoutes(deps: AuthDependencies) {
     });
   });
   router.use("/admin", verify, profile, requireRole("admin"));
+  if (deps.offers) router.use("/admin", adminOffersRouter(deps.offers));
   if (deps.organizationManagement)
     router.use(
       "/admin/organizaciones",
@@ -109,12 +113,30 @@ export function authRoutes(deps: AuthDependencies) {
     }),
   );
   router.use("/publicador", verify, profile, requireRole("publisher"));
-  if (deps.organizationManagement)
+  if (deps.offers)
+    router.use("/publicador", publisherOffersRouter(deps.offers));
+  else if (deps.organizationManagement)
     router.use(
       "/publicador",
       publicationGuardRouter(deps.organizationManagement),
     );
   router.use(["/ofertas", "/catalogos"], verify, profile);
+  if (deps.offers) {
+    router.get("/catalogos/carreras", async (_req, res) =>
+      res.json({
+        data: await deps.offers!.degreesList(),
+        error: null,
+        meta: null,
+      }),
+    );
+    router.get("/ofertas/:id", async (req, res) =>
+      res.json({
+        data: await deps.offers!.published(z.uuid().parse(req.params.id)),
+        error: null,
+        meta: null,
+      }),
+    );
+  }
   router.get(
     "/organizaciones/mia",
     verify,

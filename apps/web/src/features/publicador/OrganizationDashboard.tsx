@@ -82,10 +82,13 @@ export function OrganizationDashboard() {
           <section className="rounded-xl bg-muted p-5">
             <h2 className="font-semibold">Publicación de oportunidades</h2>
             <p className="mt-2 text-sm">
-              La creación y el envío de ofertas se habilitarán en Fase 3. Esta
-              pantalla muestra únicamente el estado y los permisos reales de tu
-              organización.
+              Crea borradores y envía oportunidades a revisión según los
+              permisos de tu organización. Las ediciones pendientes conservan la
+              última versión aprobada.
             </p>
+            <Button className="mt-4" asChild>
+              <Link to="/publicador/ofertas">Ver mis oportunidades</Link>
+            </Button>
           </section>
         </>
       )}

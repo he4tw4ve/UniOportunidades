@@ -168,8 +168,8 @@ export async function seedDatabase(db: Queryable, users: Map<string, string>) {
     );
     if (i < 2) {
       await db.query(
-        `INSERT INTO public.revisiones_oferta(id,oferta_id,numero_version,estado_revision,titulo,descripcion,actividades,requisitos,modalidad,ciudad,estado_region,fecha_limite,alcance_carreras,contacto_nombre,contacto_email,created_by,submitted_at,decided_at)
-   SELECT $1,oferta_id,2,$2,titulo||' · edición FICTICIA',descripcion,actividades,requisitos,modalidad,ciudad,estado_region,fecha_limite,alcance_carreras,contacto_nombre,contacto_email,created_by,now(),CASE WHEN $2='rejected' THEN now() ELSE NULL END FROM public.revisiones_oferta WHERE id=$3`,
+        `INSERT INTO public.revisiones_oferta(id,oferta_id,numero_version,estado_revision,titulo,descripcion,actividades,requisitos,modalidad,ciudad,estado_region,fecha_limite,alcance_carreras,contacto_nombre,contacto_email,contacto_instrucciones,created_by,submitted_at,decided_at)
+   SELECT $1,oferta_id,2,$2,titulo||' · edición FICTICIA',descripcion,actividades,requisitos,modalidad,ciudad,estado_region,fecha_limite,alcance_carreras,contacto_nombre,contacto_email,contacto_instrucciones,created_by,now(),CASE WHEN $2='rejected' THEN now() ELSE NULL END FROM public.revisiones_oferta WHERE id=$3`,
         [seedId(400 + i), i === 0 ? "pending" : "rejected", seedId(200 + i)],
       );
       if (i === 1)
