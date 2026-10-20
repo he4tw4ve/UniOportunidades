@@ -70,6 +70,52 @@ function setup() {
   };
 }
 describe("Sesión y autorización backend", () => {
+  it("audita todas las familias de endpoints protegidos antes de validar cuerpos", async () => {
+    const { app } = setup();
+    const agent = request(app);
+    const paths = [
+      ["get", "/admin/metricas"],
+      ["get", "/admin/usuarios"],
+      ["get", "/admin/organizaciones"],
+      ["get", "/admin/ofertas"],
+      ["get", "/admin/revisiones"],
+      ["post", "/admin/organizaciones/id/decision"],
+      ["put", "/admin/organizaciones/id/permisos"],
+      ["post", "/admin/revisiones/id/decision"],
+      ["post", "/admin/ofertas/id/correccion"],
+      ["patch", "/admin/ofertas/id/estado"],
+    ] as const;
+    for (const [method, path] of paths) {
+      expect((await request(app)[method]("/api/v1" + path)).status).toBe(401);
+      for (const role of ["student", "publisher"])
+        expect(
+          (
+            await agent[method]("/api/v1" + path).set(
+              "Authorization",
+              `Bearer ${role}`,
+            )
+          ).status,
+        ).toBe(403);
+    }
+    for (const [method, path] of [
+      ["get", "/publicador/ofertas"],
+      ["post", "/publicador/ofertas"],
+      ["patch", "/publicador/revisiones/id"],
+      ["post", "/publicador/revisiones/id/enviar"],
+      ["post", "/publicador/ofertas/id/nueva-revision"],
+      ["patch", "/publicador/ofertas/id/estado"],
+    ] as const) {
+      expect((await request(app)[method]("/api/v1" + path)).status).toBe(401);
+      expect(
+        (
+          await agent[method]("/api/v1" + path).set(
+            "Authorization",
+            "Bearer student",
+          )
+        ).status,
+      ).toBe(403);
+    }
+  });
   it.each(["student", "publisher", "admin"])(
     "permite /auth/yo a %s con identidad validada",
     async (role) => {

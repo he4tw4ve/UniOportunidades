@@ -6,6 +6,8 @@ import { ProfilesRepository } from "./db/profilesRepository.js";
 import { OrganizationsRepository } from "./db/organizationsRepository.js";
 import { OrganizationManagementRepository } from "./db/organizationManagementRepository.js";
 import { OffersRepository } from "./db/offersRepository.js";
+import { CatalogRepository } from "./db/catalogRepository.js";
+import { AdminRepository } from "./db/adminRepository.js";
 import { createAuthGateway } from "./modules/auth/gateway.js";
 import {
   AuthService,
@@ -28,6 +30,8 @@ const deps =
         organizations: new OrganizationsRepository(pool),
         organizationManagement: new OrganizationManagementRepository(pool),
         offers: new OffersRepository(pool),
+        catalog: new CatalogRepository(pool),
+        admin: new AdminRepository(pool),
         service: new AuthService(
           gateway,
           profiles,

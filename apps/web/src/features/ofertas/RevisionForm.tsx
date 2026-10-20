@@ -44,6 +44,32 @@ export function RevisionForm({
       );
       return;
     }
+    if (submit || correction) {
+      const required = [
+        input.actividades,
+        input.requisitos,
+        input.contacto_nombre,
+        input.contacto_instrucciones,
+      ];
+      const today = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "America/Hermosillo",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+      }).format(new Date());
+      if (
+        required.some((value) => !value.trim()) ||
+        (input.modalidad !== "remote" &&
+          (!input.ciudad.trim() || !input.estado_region.trim())) ||
+        (input.alcance_carreras === "selected" && !input.carreras.length) ||
+        input.fecha_limite < today
+      ) {
+        setError(
+          "Para enviar completa actividades, requisitos, responsable e instrucciones; indica ubicación si corresponde, selecciona carreras y usa una fecha vigente en Hermosillo.",
+        );
+        return;
+      }
+    }
     if (correction && (!note.trim() || !confirmed)) {
       setError("Escribe el motivo y confirma la corrección.");
       return;
@@ -67,6 +93,8 @@ export function RevisionForm({
   ] as const;
   return (
     <form
+      aria-busy={busy}
+      aria-describedby={error ? "revision-form-error" : undefined}
       className="space-y-5 rounded-xl border border-border bg-white p-6"
       onSubmit={handleSubmit((data) => persist(data, false))}
     >
@@ -279,7 +307,11 @@ export function RevisionForm({
         </div>
       </fieldset>
       {error && (
-        <p role="alert" className="rounded-lg bg-red-50 p-4 text-red-900">
+        <p
+          id="revision-form-error"
+          role="alert"
+          className="rounded-lg bg-red-50 p-4 text-red-900"
+        >
           {error}
         </p>
       )}

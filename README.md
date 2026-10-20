@@ -1,4 +1,4 @@
-# UniOportunidades · Fase 3
+# UniOportunidades · Fase 5
 
 Prototipo académico independiente, en español y sin integración oficial con UNISON. Implementa autenticación Supabase, organizaciones y permisos, borradores y versiones de oportunidades, envío y moderación, cierre/reapertura/archivo y correcciones administrativas auditadas. Nunca uses contraseñas universitarias reales.
 
@@ -44,6 +44,9 @@ npm.cmd test
 npm.cmd run lint
 npm.cmd run format:check
 npm.cmd run format
+npm.cmd run audit:security
+npm.cmd exec -- playwright install chromium
+npm.cmd run test:e2e
 npm.cmd run start -w @unioportunidades/api
 npm.cmd run preview -w @unioportunidades/web
 ```
@@ -65,6 +68,8 @@ Build compila API y web, incluido el código de migración/seed del servidor. Te
 - [Arquitectura y decisiones del modelo](docs/architecture.md).
 - [Fase 2: flujos, pruebas y límites](docs/phase-2-verification.md).
 - [Fase 3: versiones, moderación y verificación](docs/phase-3-verification.md).
+- [Fase 5: criterios de aceptación y verificaciones](docs/phase-5-verification.md).
+- [Guion de demostración y cuentas](docs/demo.md).
 - La migración `db/migrations/001_init.sql` copia íntegramente `docs/02_ESQUEMA_SQL.sql`. El runner lleva historial y checksum en `private_app.schema_migrations`.
 - `apps/api/src/db`: pool, transacciones, repositorios, migración y fixtures. `scripts/`: entradas server-only. `apps/web/src/features/auth`: login, alta y sesión.
 
@@ -74,6 +79,12 @@ Fase 3 no cambia el esquema ni requiere una migración adicional. No se ejecutar
 
 `/publicador/ofertas` lista las oportunidades propias y distingue última edición y versión publicada. `/publicador/ofertas/nueva` crea un borrador y `/publicador/ofertas/:id/editar` permite guardar, enviar, crear nuevas revisiones y consultar rechazos. `/admin/revisiones` presenta la cola; `/admin/ofertas/:id` permite comparar contenido, decidir, cerrar/reabrir/archivar o corregir mediante nueva versión auditada. La API vuelve a verificar propietario, rol, organización y permisos en cada escritura.
 
-`/ofertas/:id` muestra únicamente la revisión aprobada publicada, vigente, abierta y de organización aprobada; una edición pendiente no la reemplaza. El listado `/ofertas` con búsquedas y filtros sigue pendiente de Fase 4. Hay datos ficticios del seed; no representan vacantes reales. No hay postulaciones, pagos, chat, currículums, SSO real ni consultas de negocio desde el navegador.
+`/ofertas` ofrece tarjetas, búsqueda, filtros combinables por tipo, carrera, departamento, modalidad y ciudad, orden y paginación. Estudiantes ven inicialmente su carrera y pueden elegir «Ver todas». Publicadores y administradores también navegan el catálogo. Listado y detalle leen PostgreSQL mediante Express: solo revisión publicada aprobada, oferta abierta, organización aprobada y fecha vigente. Una revisión pendiente no reemplaza lo publicado. Contacto externo, sin solicitudes internas. Los datos ficticios del seed no representan vacantes reales.
+
+Consulta [Fase 4: archivos, comandos y resultados](docs/phase-4-verification.md). No cambia el modelo ni requiere migraciones nuevas. Se verificaron consultas remotas de solo lectura; no se modificaron datos ni flujos de confirmación o paneles administrativos.
+
+Fase 5 mantiene rutas y diseño: `/admin/panel` presenta indicadores reales de ofertas pendientes, organizaciones pendientes, publicadas vigentes y vencimientos en 7 días. `/admin/usuarios` es un listado de consulta sin edición de roles. Se añadieron foco de teclado, destino accesible del enlace de salto y validación previa al envío de ofertas. No requiere migración ni nuevas variables de producción. El seed conserva datos existentes; los nuevos escenarios por carrera solo se crean al insertar ofertas nuevas.
+
+`test:e2e` usa puertos 3100/3101 y base efímera con Auth de pruebas, sin credenciales de Supabase. La auditoría necesita build previo; compara secretos locales con fuentes y bundle sin imprimirlos. No es una certificación de seguridad ni sustituye revisar credenciales ya compartidas. La confirmación SMTP y el flujo remoto deben comprobarse siguiendo el guion manual; no se ejecutaron escrituras remotas durante Fase 5.
 
 Producción requiere HTTPS, fallback SPA a `index.html`, proxy `/api`, CORS explícito y despliegue configurado. El limitador actual es por IP/en memoria; detrás de proxy o con varias réplicas debe configurarse confianza del proxy y almacenamiento compartido antes de desplegar. No se ha desplegado ni conectado un proyecto remoto durante esta implementación.

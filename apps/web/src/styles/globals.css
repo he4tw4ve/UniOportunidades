@@ -32,6 +32,17 @@
     outline: 2px solid #0f766e;
     outline-offset: 4px;
   }
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible {
+    outline: 2px solid #0f766e;
+    outline-offset: 2px;
+  }
+  input,
+  select,
+  textarea {
+    max-width: 100%;
+  }
   button:not(:disabled) {
     cursor: pointer;
   }
@@ -55,4 +66,27 @@
 }
 .skip-link:focus {
   top: 1rem;
+}
+.catalog-filter-dialog {
+  margin: 0 0 0 auto;
+  width: min(90vw, 400px);
+  max-width: 100%;
+  height: 100dvh;
+  max-height: 100dvh;
+  border: 0;
+  padding: 0;
+  overflow-y: auto;
+  background: white;
+  color: #243447;
+}
+.catalog-filter-dialog::backdrop {
+  background: rgb(15 23 42 / 0.5);
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse {
+    animation: none;
+  }
+  html {
+    scroll-behavior: auto;
+  }
 }

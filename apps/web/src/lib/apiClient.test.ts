@@ -6,7 +6,7 @@ describe("Cliente HTTP", () => {
     const data = {
       status: "ok",
       service: "unioportunidades-api",
-      phase: 3,
+      phase: 5,
       authentication: "not_configured",
       database: "not_configured",
     };

@@ -72,7 +72,7 @@ export async function apiRequest<T>(
 const healthSchema = z.object({
   status: z.enum(["ok", "degraded"]),
   service: z.string(),
-  phase: z.literal(3),
+  phase: z.literal(5),
   authentication: z.enum(["configured", "not_configured"]),
   database: z.enum(["available", "not_configured", "unavailable"]),
 });

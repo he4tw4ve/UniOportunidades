@@ -1,6 +1,7 @@
 import type { ErrorRequestHandler } from "express";
 import { AppError } from "../shared/errors.js";
 import { ZodError } from "zod";
+import { safeDatabaseError } from "../db/diagnostics.js";
 export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   const known = error instanceof AppError;
   if (error instanceof ZodError) {
@@ -16,6 +17,32 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   }
   const invalidJson =
     error instanceof SyntaxError && "status" in error && error.status === 400;
+  const diagnostic = safeDatabaseError(error);
+  const unavailable =
+    !known &&
+    [
+      "CONNECTION_TIMEOUT",
+      "ETIMEDOUT",
+      "ECONNREFUSED",
+      "ENOTFOUND",
+      "EAI_AGAIN",
+      "ENETUNREACH",
+      "EHOSTUNREACH",
+      "57014",
+    ].includes(diagnostic.code);
+  if (unavailable) {
+    console.error("Dependencia de conexión no disponible:", diagnostic.code);
+    res.status(503).json({
+      data: null,
+      error: {
+        code: "SERVICE_UNAVAILABLE",
+        message:
+          "No se pudo conectar con el servicio de datos. Intenta de nuevo en unos momentos.",
+      },
+      meta: null,
+    });
+    return;
+  }
   res.status(known ? error.status : invalidJson ? 400 : 500).json({
     data: null,
     error: {

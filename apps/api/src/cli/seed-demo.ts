@@ -42,7 +42,7 @@ if (!parsed.success) {
       await seedDatabase(db, ids);
     });
     console.log(
-      "Seed finalizado: 7 cuentas FICTICIAS, 3 organizaciones y 8 ofertas FICTICIAS. Sin contraseñas en logs ni tablas de negocio.",
+      "Seed finalizado: cuentas y datos FICTICIOS creados o conservados. Las entidades existentes, contraseñas, permisos y fechas no se reinicializan. Sin secretos en logs ni tablas de negocio.",
     );
   } catch {
     console.error(

@@ -246,6 +246,20 @@ export const correctOffer = (
     comentario,
   });
 const publishedSchema = z.object({
+  alcance_carreras: z.enum(["all", "selected"]).default("all"),
+  carreras: z
+    .array(
+      z.object({
+        id: z.string(),
+        nombre: z.string(),
+        departamento_id: z.string(),
+        departamento: z.string(),
+      }),
+    )
+    .default([]),
+  duracion_info: z.string().nullable().optional(),
+  para_tu_carrera: z.boolean().default(false),
+  publicada_at: z.string().nullable().optional(),
   id: z.string(),
   oferta_id: z.string(),
   numero_version: z.number(),

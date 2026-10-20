@@ -132,7 +132,7 @@ export async function seedDatabase(db: Queryable, users: Map<string, string>) {
       }
     }
   }
-  // Fixtures for subsequent phases; no offer endpoints are implemented in Phase 1.
+  // Stable demo fixtures: reruns preserve decisions, edits and deadlines.
   for (let i = 0; i < 8; i++) {
     const org = i % 2 === 0 ? 0 : 2,
       owner = users.get(demoAccounts[4 + org].email)!;
@@ -166,6 +166,22 @@ export async function seedDatabase(db: Queryable, users: Map<string, string>) {
       "UPDATE public.ofertas SET revision_publicada_id=$1 WHERE id=$2",
       [seedId(200 + i), seedId(100 + i)],
     );
+    // Only newly inserted fixtures receive these scenarios; never rewrite existing data.
+    if (i >= 2) {
+      await db.query(
+        "UPDATE public.revisiones_oferta SET alcance_carreras='selected' WHERE id=$1",
+        [seedId(200 + i)],
+      );
+      await db.query(
+        "INSERT INTO public.revision_carreras(revision_id,carrera_id) VALUES($1,$2)",
+        [seedId(200 + i), seedId(11 + (i % 3))],
+      );
+    }
+    if (i === 0)
+      await db.query(
+        "UPDATE public.revisiones_oferta SET fecha_limite=(now() AT TIME ZONE 'America/Hermosillo')::date + 5 WHERE id=$1",
+        [seedId(200 + i)],
+      );
     if (i < 2) {
       await db.query(
         `INSERT INTO public.revisiones_oferta(id,oferta_id,numero_version,estado_revision,titulo,descripcion,actividades,requisitos,modalidad,ciudad,estado_region,fecha_limite,alcance_carreras,contacto_nombre,contacto_email,contacto_instrucciones,created_by,submitted_at,decided_at)

@@ -1,6 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { safeDatabaseError } from "./diagnostics.js";
 describe("Diagnóstico PostgreSQL sin secretos", () => {
+  it("conserva el timeout del driver aunque la causa interna sea genérica", () => {
+    const result = safeDatabaseError({
+      message: "Connection terminated due to connection timeout NO_PUBLICAR",
+      cause: new Error("NO_PUBLICAR"),
+    });
+    expect(result.code).toBe("CONNECTION_TIMEOUT");
+    expect(JSON.stringify(result)).not.toContain("NO_PUBLICAR");
+  });
   it("explica el fallo TLS real sin divulgar mensajes del driver", () => {
     const result = safeDatabaseError({
       code: "SELF_SIGNED_CERT_IN_CHAIN",

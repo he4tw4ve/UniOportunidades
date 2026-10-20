@@ -3,7 +3,14 @@ import ts from "typescript-eslint";
 import globals from "globals";
 import hooks from "eslint-plugin-react-hooks";
 export default ts.config(
-  { ignores: ["**/dist/**", "**/node_modules/**"] },
+  {
+    ignores: [
+      "**/dist/**",
+      "**/node_modules/**",
+      "test-results/**",
+      "playwright-report/**",
+    ],
+  },
   js.configs.recommended,
   ...ts.configs.recommended,
   {
@@ -15,7 +22,7 @@ export default ts.config(
     },
   },
   {
-    files: ["**/*.{ts,tsx,js}"],
+    files: ["**/*.{ts,tsx,js,mjs}"],
     languageOptions: { globals: { ...globals.node, ...globals.browser } },
   },
   {

@@ -17,17 +17,20 @@
     "format:check": "prettier --check .",
     "db:migrate": "npm run db:migrate -w @unioportunidades/api",
     "db:diagnose": "npm run db:diagnose -w @unioportunidades/api",
-    "seed:demo": "npm run seed:demo -w @unioportunidades/api"
+    "seed:demo": "npm run seed:demo -w @unioportunidades/api",
+    "test:e2e": "playwright test",
+    "audit:security": "node scripts/audit-security.mjs"
   },
   "devDependencies": {
-    "concurrently": "^9.2.0",
-    "typescript": "^5.9.3",
-    "eslint": "^9.39.0",
     "@eslint/js": "^9.39.0",
-    "typescript-eslint": "^8.46.0",
+    "@playwright/test": "^1.64.1",
+    "concurrently": "^9.2.0",
+    "eslint": "^9.39.0",
     "eslint-plugin-react-hooks": "^7.0.0",
     "globals": "^16.4.0",
-    "prettier": "^3.6.2"
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.0"
   },
   "type": "module"
 }

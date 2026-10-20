@@ -1,4 +1,12 @@
-# Arquitectura · Fase 3
+# Arquitectura · Fase 5
+
+Fase 5 añade AdminRepository con indicadores obtenidos en una única consulta SQL parametrizada. Las rutas conservan los guards de sesión/perfil/rol. No cambia modelo ni migraciones. Los indicadores de publicaciones usan las mismas reglas de visibilidad que el catálogo y vencimientos en Hermosillo.
+
+Playwright usa exclusivamente `e2e/server.ts`, no el servidor de producción: PostgreSQL embebido efímero, esquema y seed reales, adaptador Auth local y puertos separados. No se carga `.env` de API. Las variables web se sobrescriben solo en el proceso de prueba. El adaptador no se importa desde producción y sus tokens no son aceptados por Supabase. Las peticiones del harness se serializan para preservar límites de transacción en su única conexión; no acredita concurrencia real entre conexiones PostgreSQL remotas.
+
+En Fase 4, `CatalogRepository` centraliza la visibilidad de listado, detalle y ciudades. SQL parametrizado, orden permitido explícitamente y snapshot REPEATABLE READ de solo lectura para total/página. No cambia modelo, migraciones ni RLS. Personalización derivada del perfil validado. Las rutas de catálogo preceden al detalle anterior en producción.
+
+React consume contratos Zod por API, sin consultas de negocio directas a Supabase ni ofertas simuladas. La URL conserva filtros y página al volver del detalle. Tarjetas, filtros laterales en escritorio y diálogo nativo en móvil, carga/error/vacío y contacto externo. No se modificaron confirmaciones ni paneles administrativos. Pruebas con PostgreSQL embebido y React/jsdom; comprobación adicional de repositorios contra PostgreSQL remoto de solo lectura. Esta última no equivale a una prueba completa de Auth/navegador.
 
 React usa Supabase exclusivamente para Auth. Las consultas de negocio van a Express con Bearer token. Express verifica cada identidad mediante `getUser(token)` y consulta `perfiles`/membresía/permisos en PostgreSQL con `pg`. Ni el rol del JWT/metadata ni un header/body elegido por cliente autoriza operaciones. El cliente web solo presenta el rol obtenido de `/auth/yo`; los guards visuales complementan la autorización real del servidor.
 

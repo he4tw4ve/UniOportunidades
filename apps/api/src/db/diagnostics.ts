@@ -62,8 +62,6 @@ export function safeDatabaseError(error: unknown): {
       ? value.code
       : undefined;
   if (code && explanations[code]) return { code, message: explanations[code] };
-  if (value.errors?.length) return safeDatabaseError(value.errors[0]);
-  if (value.cause) return safeDatabaseError(value.cause);
   // Match driver text internally, but emit only fixed safe messages.
   if (typeof value.message === "string") {
     if (/timeout|timed out/i.test(value.message))
@@ -81,6 +79,8 @@ export function safeDatabaseError(error: unknown): {
           "El checksum difiere de la migración aplicada. No edites ni vuelvas a aplicar manualmente esa versión.",
       };
   }
+  if (value.errors?.length) return safeDatabaseError(value.errors[0]);
+  if (value.cause) return safeDatabaseError(value.cause);
   return {
     code: "DATABASE_ERROR",
     message:

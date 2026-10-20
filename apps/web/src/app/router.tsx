@@ -3,12 +3,13 @@ import { CatalogLayout, WorkspaceLayout } from "@/components/layout/Layouts";
 import { HomePage } from "@/features/catalogo/HomePage";
 import { AccessPage } from "@/features/auth/AccessPage";
 import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
-import { PendingPage as CatalogPage } from "@/features/catalogo/PendingPage";
+import { CatalogPage } from "@/features/catalogo/CatalogPage";
 import { OffersListPage } from "@/features/ofertas/OffersListPage";
 import { OfferEditorPage } from "@/features/ofertas/OfferEditorPage";
 import { OfferDetailPage } from "@/features/ofertas/OfferDetailPage";
 import { PublishedOfferPage } from "@/features/ofertas/PublishedOfferPage";
-import { PendingPage as AdminPage } from "@/features/admin/PendingPage";
+import { AdminDashboard } from "@/features/admin/AdminDashboard";
+import { UsersPage } from "@/features/admin/UsersPage";
 import { ProfilePage } from "@/features/perfil/ProfilePage";
 import { RegistrationPage } from "@/features/auth/RegistrationPage";
 import { OrganizationDashboard } from "@/features/publicador/OrganizationDashboard";
@@ -87,7 +88,9 @@ export const router = createBrowserRouter([
         ].map((path) => ({
           path: `/admin/${path}`,
           element:
-            path === "panel" || path === "organizaciones" ? (
+            path === "panel" ? (
+              <AdminDashboard />
+            ) : path === "organizaciones" ? (
               <OrganizationsPage />
             ) : path === "organizaciones/:id" ? (
               <OrganizationDetailPage />
@@ -98,7 +101,7 @@ export const router = createBrowserRouter([
             ) : path === "ofertas/:id" ? (
               <OfferDetailPage admin />
             ) : (
-              <AdminPage />
+              <UsersPage />
             ),
         })),
       },

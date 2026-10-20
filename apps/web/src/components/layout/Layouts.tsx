@@ -46,7 +46,11 @@ export function CatalogLayout() {
           </nav>
         </div>
       </header>
-      <main id="contenido" className="mx-auto max-w-6xl px-5 py-10">
+      <main
+        id="contenido"
+        tabIndex={-1}
+        className="mx-auto max-w-6xl px-5 py-10"
+      >
         <Outlet />
       </main>
       <footer className="mx-auto max-w-6xl border-t border-border px-5 py-7 text-sm text-muted-foreground">
@@ -104,7 +108,7 @@ export function WorkspaceLayout({ area }: { area: "publisher" | "admin" }) {
             </Link>
           </nav>
         </aside>
-        <main id="contenido" className="min-w-0 p-6 md:p-10">
+        <main id="contenido" tabIndex={-1} className="min-w-0 p-6 md:p-10">
           <Outlet />
         </main>
       </div>

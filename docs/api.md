@@ -1,10 +1,30 @@
-# Contratos API · Fase 3
+# Contratos API · Fase 5
 
-Base: `/api/v1`. Respuesta `{data,error,meta}`. Las rutas de Auth/perfil/roles llevan `Cache-Control: no-store`. Token solo en `Authorization: Bearer <access_token>`, nunca en URL. JSON no válido o campos extra en mutaciones se rechazan con 400.
+Base: `/api/v1`. Respuesta `{data,error,meta}`. Healthcheck informa `phase:5`. Las rutas de Auth/perfil/roles llevan `Cache-Control: no-store`. Token solo en `Authorization: Bearer <access_token>`, nunca en URL. JSON no válido o campos extra en mutaciones se rechazan con 400.
+
+## Indicadores de Fase 5
+
+GET `/admin/metricas`, solo administrador con perfil activo. Devuelve `{ofertas_pendientes,organizaciones_pendientes,publicadas,proximas_a_vencer}` con enteros no negativos. Pendientes cuenta revisiones pending; organizaciones pendientes cuenta estado pending. Publicadas aplica exactamente las condiciones del catálogo. Próximas a vencer es el subconjunto con fecha entre hoy y hoy + 7 días inclusive, en Hermosillo. Una sola consulta SQL obtiene un snapshot coherente. No revela cuentas ni contenido. Sin token: 401; otros roles: 403.
+
+GET `/admin/usuarios` sigue siendo consulta de hasta 100 perfiles, sin edición de roles. Los timeouts de conexión conocidos responden 503 `SERVICE_UNAVAILABLE`, sin mensajes crudos ni secretos.
+
+## Catálogo de Fase 4
+
+Todos los endpoints requieren sesión validada y perfil activo, para los tres roles:
+
+- GET `/ofertas`: `{items,total,page,pageSize,alcance,carrera_personalizada}`.
+- GET `/ofertas/:id`: versión publicada, carreras, fechas y contacto externo; ocultas/inexistentes responden 404.
+- GET `/catalogos/filtros`: `{carreras,departamentos,ciudades}` desde PostgreSQL; ciudades solo de ofertas visibles.
+
+Query combinable: `tipo=social_service/internship`, `carrera_id=UUID`, `departamento_id=UUID`, `modalidad=in_person/hybrid/remote`, `ciudad`, `q` (título/descripción/organización, máximo 150 caracteres), `orden=recientes/fecha_limite`, `alcance=mine/all`, `page=1`, `pageSize=12` (máximo 48). Campos inválidos o desconocidos: 400. Búsqueda literal de comodines, orden estable por ID; recientes usa fecha de aprobación publicada.
+
+Estudiantes con carrera usan inicialmente mine salvo filtro explícito de carrera/departamento; la carrera procede del perfil servidor. «Ver todas» usa all; otros roles siempre usan all. Ofertas de alcance all coinciden con cualquier carrera/departamento. `para_tu_carrera` también destaca coincidencias al explorar todas.
+
+Listado y detalle comparten puntero publicado perteneciente a la oferta, revisión approved, oferta open, organización approved y fecha límite igual o posterior a hoy en America/Hermosillo. Una revisión pendiente no participa en contenido, búsqueda ni filtros. Sin solicitud interna.
 
 | Método y ruta                           | Acceso                              | Contrato                                                                                                                                                                      |
 | --------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET `/health`                           | Público                             | `status`, `service`, `phase:3`, `authentication:configured/not_configured`, `database:available/not_configured/unavailable`; DB se prueba con SELECT 1, caída DB devuelve 503 |
+| GET `/health`                           | Público                             | `status`, `service`, `phase:5`, `authentication:configured/not_configured`, `database:available/not_configured/unavailable`; DB se prueba con SELECT 1, caída DB devuelve 503 |
 | POST `/auth/estudiantes/iniciar-sesion` | Público, limitado                   | `{expediente,password}`; resuelve email demo en DB, autentica con Auth, verifica perfil student activo; devuelve tokens para `setSession`                                     |
 | POST `/auth/correo/iniciar-sesion`      | Público, limitado                   | `{email,password}`; login publisher/admin o usuario confirmado sin perfil aún; no permite student ni inactivos                                                                |
 | GET `/auth/yo`                          | Token validado + perfil activo      | Perfil `{id,nombre_completo,email,rol,activo,estudiante,organizacion}`; carrera y permisos desde SQL                                                                          |
@@ -18,11 +38,11 @@ Tokens de login: `{access_token,refresh_token,expires_in,token_type}`. Credencia
 
 Sesión inválida/ausente: 401 `UNAUTHORIZED`. Correo sin confirmar: 403 `EMAIL_NOT_CONFIRMED`. Perfil faltante: 403 `PROFILE_REQUIRED` (salvo alta inicial de organización). Perfil inactivo: 403 `ACCOUNT_DISABLED`. Rol distinto: 403 `FORBIDDEN`. Alta repetida: 409 `ALREADY_REGISTERED`. Campos inválidos: 400 `VALIDATION_ERROR`. Límite de acceso: 429 `TOO_MANY_REQUESTS`. Configuración ausente: 503 `NOT_CONFIGURED`. Fallo interno: 500 genérico sin detalles de SQL/secretos.
 
-Todo `/admin/*` y `/publicador/*` pasa primero por sesión/perfil/rol, incluso rutas aún no implementadas; las rutas autorizadas ausentes devuelven 404. `/ofertas/*` y `/catalogos/*` requieren sesión/perfil, pero sus operaciones de negocio quedan para fases posteriores. No hay endpoints de ofertas que devuelvan éxito ficticio.
+Todo `/admin/*` y `/publicador/*` pasa primero por sesión/perfil/rol, incluso rutas aún no implementadas; las rutas autorizadas ausentes devuelven 404. `/ofertas/*` y `/catalogos/*` requieren sesión/perfil y consultan PostgreSQL para todos los roles.
 
 ## Organizaciones y permisos
 
-El healthcheck ahora informa `phase:3`. Los endpoints Auth conservan su contrato.
+El healthcheck ahora informa `phase:5`. Los endpoints Auth conservan su contrato.
 
 | Método/ruta                               | Acceso    | Datos                                                                                                                      |
 | ----------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------- |

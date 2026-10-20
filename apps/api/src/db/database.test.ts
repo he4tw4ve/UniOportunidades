@@ -100,6 +100,7 @@ describe("Migración y repositorios sobre PostgreSQL embebido", () => {
     expect(await count("organizaciones")).toBe(3);
     expect(await count("ofertas")).toBe(8);
     expect(await count("revisiones_oferta")).toBe(10);
+    expect(await count("revision_carreras")).toBe(6);
     const pendingSeed = await db.query<{ contacto_instrucciones: string }>(
       "SELECT contacto_instrucciones FROM public.revisiones_oferta WHERE estado_revision='pending'",
     );

@@ -132,6 +132,23 @@ beforeEach(() => {
 });
 afterEach(cleanup);
 describe("Formularios y moderación de oportunidades", () => {
+  it("impide enviar un borrador incompleto y asocia el error al formulario", async () => {
+    const save = vi.fn();
+    mount(
+      <RevisionForm
+        initial={{ ...content, actividades: "", fecha_limite: "2000-01-01" }}
+        token="test-token"
+        onSave={save}
+      />,
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Guardar y enviar a revisión" }),
+    );
+    const alert = await screen.findByRole("alert");
+    expect(alert.id).toBe("revision-form-error");
+    expect(alert.textContent).toContain("fecha vigente");
+    expect(save).not.toHaveBeenCalled();
+  });
   it("guarda un borrador y solicita guardar/enviar como acciones distintas", async () => {
     const save = vi.fn().mockResolvedValue(undefined);
     mount(<RevisionForm initial={content} token="test-token" onSave={save} />);
