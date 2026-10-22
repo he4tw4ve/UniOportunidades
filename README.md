@@ -1,8 +1,12 @@
-# UniOportunidades · Fase 6
+# UniOportunidades · Fase 8
 
 Prototipo académico independiente, en español y sin integración oficial con UNISON. Implementa autenticación Supabase, organizaciones y permisos, borradores y versiones de oportunidades, envío y moderación, cierre/reapertura/archivo y correcciones administrativas auditadas. Nunca uses contraseñas universitarias reales.
 
 Fase 6 incorpora sidebar por rol con drawer móvil, menú de cuenta, landing con acceso/registro integrados y dashboards operativos. Conserva catálogo, rutas, permisos y reglas de negocio. Revisa [decisiones visuales, pruebas y verificación manual](docs/phase-6-uiux.md). No requiere migraciones ni nuevas variables.
+
+Fase 7 estabiliza la sesión al cambiar de pestaña, añade métricas reales al panel del publicador, búsqueda/filtros/paginación al directorio de usuarios y consulta de miembros de la propia organización. Conserva identidad visual, arquitectura y reglas de aprobación/versionado. Sin migración ni nuevas variables. Consulta [verificación y pendientes con Supabase real](docs/phase-7-verification.md). La evidencia histórica de esa fase se conserva en su informe.
+
+Fase 8 añade controles de sesión con vigencia de perfil acotada, deadlines de red/DB, TLS obligatorio fuera de localhost, proxy explícito, límites HTTP y detección preventiva de secretos antes del build. Consulta [revisión de seguridad, pruebas, comprobación remota de solo lectura y riesgos aceptados](docs/security-review.md). No se desplegó ni se modificó Supabase. Las fases 9–10 quedan pendientes.
 
 ## Preparar y ejecutar
 
@@ -89,4 +93,4 @@ Fase 5 mantiene rutas y diseño: `/admin/panel` presenta indicadores reales de o
 
 `test:e2e` usa puertos 3100/3101 y base efímera con Auth de pruebas, sin credenciales de Supabase. La auditoría necesita build previo; compara secretos locales con fuentes y bundle sin imprimirlos. No es una certificación de seguridad ni sustituye revisar credenciales ya compartidas. La confirmación SMTP y el flujo remoto deben comprobarse siguiendo el guion manual; no se ejecutaron escrituras remotas durante Fase 5.
 
-Producción requiere HTTPS, fallback SPA a `index.html`, proxy `/api`, CORS explícito y despliegue configurado. El limitador actual es por IP/en memoria; detrás de proxy o con varias réplicas debe configurarse confianza del proxy y almacenamiento compartido antes de desplegar. No se ha desplegado ni conectado un proyecto remoto durante esta implementación.
+Producción requiere HTTPS, fallback SPA a `index.html`, proxy `/api` y un origen CORS exacto. `TRUST_PROXY` está desactivado por defecto: solo configura IPs/CIDRs conocidos de un proxy que sobrescriba headers. El limitador en memoria es adecuado al alcance de una instancia pequeña; no se ha desplegado ni validado un hosting. En Fase 8 solo se consultaron metadatos remotos de TLS/RLS/permisos en modo read-only. No se hicieron escrituras remotas.

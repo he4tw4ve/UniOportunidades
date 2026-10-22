@@ -445,3 +445,203 @@ describe("Organizaciones: HTTP + transacciones PostgreSQL reales en memoria", ()
     }
   });
 });
+
+describe("Fase 7: directorios de lectura", () => {
+  it("pagina más de 100 cuentas, cuenta resultados y solo proyecta campos mínimos", async () => {
+    const identities = (
+      await db.query<{ id: string }>(
+        "INSERT INTO auth.users(id) SELECT gen_random_uuid() FROM generate_series(1,105) RETURNING id",
+      )
+    ).rows.map((row) => row.id);
+    await db.query(
+      `INSERT INTO public.perfiles(id,nombre_completo,email,rol,activo)
+      SELECT id,'DirectorioF7 '||n,'directoriof7-'||n||'@example.test',
+      CASE WHEN n<=60 THEN 'student' ELSE 'publisher' END,n<=80
+      FROM unnest($1::uuid[]) WITH ORDINALITY AS source(id,n)`,
+      [identities],
+    );
+    const first = await api(
+      "get",
+      "/admin/usuarios?q=DirectorioF7&pageSize=20",
+      admin,
+    );
+    expect(first.status).toBe(200);
+    expect(first.body.data).toMatchObject({
+      total: 105,
+      page: 1,
+      pageSize: 20,
+    });
+    expect(first.body.data.items).toHaveLength(20);
+    expect(Object.keys(first.body.data.items[0]).sort()).toEqual([
+      "activo",
+      "email",
+      "id",
+      "nombre_completo",
+      "rol",
+    ]);
+    const again = await api(
+      "get",
+      "/admin/usuarios?q=DirectorioF7&pageSize=20",
+      admin,
+    );
+    expect(again.body.data).toEqual(first.body.data);
+    const second = await api(
+      "get",
+      "/admin/usuarios?q=DirectorioF7&page=2",
+      admin,
+    );
+    const last = await api(
+      "get",
+      "/admin/usuarios?q=DirectorioF7&page=6",
+      admin,
+    );
+    expect(last.body.data.total).toBe(105);
+    expect(last.body.data.items).toHaveLength(5);
+    const ids = new Set(
+      first.body.data.items.map((item: { id: string }) => item.id),
+    );
+    expect(
+      second.body.data.items.every((item: { id: string }) => !ids.has(item.id)),
+    ).toBe(true);
+    const filtered = await api(
+      "get",
+      "/admin/usuarios?q=directoriof7&rol=publisher&activo=false&pageSize=50",
+      admin,
+    );
+    expect(filtered.body.data.total).toBe(25);
+    expect(
+      filtered.body.data.items.every(
+        (item: { rol: string; activo: boolean }) =>
+          item.rol === "publisher" && !item.activo,
+      ),
+    ).toBe(true);
+    const email = await api(
+      "get",
+      "/admin/usuarios?q=DIRECTORIOF7-105%40example.test",
+      admin,
+    );
+    expect(email.body.data.total).toBe(1);
+    const empty = await api("get", "/admin/usuarios?q=NoExisteF7", admin);
+    expect(empty.body.data).toMatchObject({ items: [], total: 0 });
+    const beyond = await api(
+      "get",
+      "/admin/usuarios?q=DirectorioF7&page=100",
+      admin,
+    );
+    expect(beyond.body.data).toMatchObject({
+      items: [],
+      total: 105,
+      page: 100,
+    });
+    for (const query of ["%25", "_", encodeURIComponent("' OR true --")]) {
+      const result = await api("get", `/admin/usuarios?q=${query}`, admin);
+      expect(result.status).toBe(200);
+      expect(result.body.data.total).toBe(0);
+    }
+  });
+  it("valida parámetros y mantiene autorización admin antes de consultar", async () => {
+    for (const query of [
+      "page=0",
+      "page=1.5",
+      "page=100001",
+      "pageSize=51",
+      "pageSize=0",
+      "activo=1",
+      "rol=owner",
+      "q=" + "a".repeat(151),
+      "q[]=x",
+      "rol=admin&rol=student",
+      "organizacion_id=x",
+    ]) {
+      expect((await api("get", `/admin/usuarios?${query}`, admin)).status).toBe(
+        400,
+      );
+    }
+    for (const actor of [publisher, student]) {
+      expect((await api("get", "/admin/usuarios", actor)).status).toBe(403);
+    }
+    expect((await api("get", "/admin/usuarios")).status).toBe(401);
+  });
+  it("lista solamente los miembros existentes de su organización, incluso pendiente o suspendida", async () => {
+    const outsider = randomUUID();
+    await db.query("INSERT INTO auth.users(id) VALUES($1)", [outsider]);
+    const otherOrg = await registration.register(
+      outsider,
+      "otra-f7@example.test",
+      {
+        nombre_completo: "Miembro ajeno FICTICIO",
+        nombre: "Otra entidad F7",
+        tipo: "company",
+        email_contacto: "otra-f7@example.test",
+      },
+    );
+    for (const estado of ["pending", "approved", "suspended", "rejected"]) {
+      await db.query("UPDATE public.organizaciones SET estado=$2 WHERE id=$1", [
+        orgId,
+        estado,
+      ]);
+      const result = await api("get", "/publicador/miembros", publisher);
+      expect(result.status).toBe(200);
+      expect(result.body.data.items).toEqual([
+        {
+          nombre_completo: "Publicador FICTICIO",
+          email: `${publisher}@example.test`,
+          rol_interno: "representative",
+          activo: true,
+        },
+      ]);
+      expect(Object.keys(result.body.data).sort()).toEqual([
+        "items",
+        "organizacion",
+      ]);
+      const otherResult = await api("get", "/publicador/miembros", outsider);
+      expect(otherResult.body.data.organizacion.nombre).toBe("Otra entidad F7");
+      expect(otherResult.body.data.items).toHaveLength(1);
+      expect(otherResult.body.data.items[0].email).toBe("otra-f7@example.test");
+    }
+    expect(
+      (
+        await api(
+          "get",
+          `/publicador/miembros?organizacion_id=${otherOrg.id}`,
+          publisher,
+        )
+      ).status,
+    ).toBe(400);
+    expect(
+      (await api("get", `/publicador/miembros/${otherOrg.id}`, publisher))
+        .status,
+    ).toBe(404);
+  });
+  it("muestra integrantes inactivos y rechaza roles ajenos, actor deshabilitado o sin membresía", async () => {
+    const second = randomUUID(),
+      unattached = randomUUID();
+    for (const [id, active] of [
+      [second, false],
+      [unattached, true],
+    ] as const) {
+      await db.query("INSERT INTO auth.users(id) VALUES($1)", [id]);
+      await db.query(
+        "INSERT INTO public.perfiles(id,nombre_completo,email,rol,activo) VALUES($1,'Representante F7',$2,'publisher',$3)",
+        [id, `${id}@example.test`, active],
+      );
+    }
+    await db.query(
+      "INSERT INTO public.miembros_organizacion(usuario_id,organizacion_id) VALUES($1,$2)",
+      [second, orgId],
+    );
+    const result = await api("get", "/publicador/miembros", publisher);
+    expect(result.body.data.items).toHaveLength(2);
+    expect(
+      result.body.data.items.find((item: { activo: boolean }) => !item.activo),
+    ).toBeTruthy();
+    for (const actor of [student, admin, second, unattached])
+      expect((await api("get", "/publicador/miembros", actor)).status).toBe(
+        403,
+      );
+    expect((await api("get", "/publicador/miembros")).status).toBe(401);
+    expect((await api("get", "/publicador/miembros", "invalid")).status).toBe(
+      401,
+    );
+  });
+});

@@ -1,5 +1,20 @@
 import { createClient } from "@supabase/supabase-js";
 import type { VerifiedUser } from "../../shared/types.js";
+import { AppError } from "../../shared/errors.js";
+function checkProvider(error: { status?: number } | null) {
+  if (error && (!error.status || error.status >= 500))
+    throw new AppError(
+      503,
+      "AUTH_UNAVAILABLE",
+      "El servicio de autenticación no está disponible. Intenta de nuevo.",
+    );
+  if (error?.status === 429)
+    throw new AppError(
+      429,
+      "TOO_MANY_REQUESTS",
+      "Demasiados intentos. Intenta de nuevo más tarde.",
+    );
+}
 export interface Tokens {
   access_token: string;
   refresh_token: string;
@@ -15,6 +30,16 @@ export interface AuthGateway {
 }
 export function createAuthGateway(url: string, key: string): AuthGateway {
   const options = {
+    global: {
+      fetch: (input: RequestInfo | URL, init?: RequestInit) =>
+        fetch(input, {
+          ...init,
+          signal: AbortSignal.any([
+            AbortSignal.timeout(8000),
+            ...(init?.signal ? [init.signal] : []),
+          ]),
+        }),
+    },
     auth: {
       persistSession: false,
       autoRefreshToken: false,
@@ -25,6 +50,7 @@ export function createAuthGateway(url: string, key: string): AuthGateway {
   return {
     async verify(token) {
       const { data, error } = await verifier.auth.getUser(token);
+      checkProvider(error);
       if (error || !data.user) return null;
       return {
         id: data.user.id,
@@ -39,6 +65,7 @@ export function createAuthGateway(url: string, key: string): AuthGateway {
         email,
         password,
       });
+      checkProvider(error);
       if (error || !data.session || !data.user) return null;
       return {
         user: {

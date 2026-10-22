@@ -9,6 +9,7 @@ import { OfferDetailPage } from "@/features/ofertas/OfferDetailPage";
 import { PublishedOfferPage } from "@/features/ofertas/PublishedOfferPage";
 import { AdminDashboard } from "@/features/admin/AdminDashboard";
 import { UsersPage } from "@/features/admin/UsersPage";
+import { OrganizationMembersPage } from "@/features/publicador/OrganizationMembersPage";
 import { ProfilePage } from "@/features/perfil/ProfilePage";
 import { OrganizationDashboard } from "@/features/publicador/OrganizationDashboard";
 import { OrganizationsPage } from "@/features/admin/OrganizationsPage";
@@ -56,11 +57,14 @@ export const router = createBrowserRouter([
           "ofertas/nueva",
           "ofertas/:id/editar",
           "organizacion",
+          "miembros",
         ].map((path) => ({
           path: `/publicador/${path}`,
           element:
             path === "panel" || path === "organizacion" ? (
               <OrganizationDashboard overview={path === "panel"} />
+            ) : path === "miembros" ? (
+              <OrganizationMembersPage />
             ) : path === "ofertas" ? (
               <OffersListPage />
             ) : (

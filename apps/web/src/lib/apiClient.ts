@@ -27,7 +27,10 @@ export async function apiRequest<T>(
       `${environment.data.VITE_API_BASE_URL.replace(/\/$/, "")}${path}`,
       {
         method: options.method ?? "GET",
-        signal: options.signal,
+        signal: AbortSignal.any([
+          AbortSignal.timeout(15000),
+          ...(options.signal ? [options.signal] : []),
+        ]),
         headers: {
           Accept: "application/json",
           ...(options.body ? { "Content-Type": "application/json" } : {}),
@@ -72,7 +75,6 @@ export async function apiRequest<T>(
 const healthSchema = z.object({
   status: z.enum(["ok", "degraded"]),
   service: z.string(),
-  phase: z.literal(5),
   authentication: z.enum(["configured", "not_configured"]),
   database: z.enum(["available", "not_configured", "unavailable"]),
 });

@@ -5,7 +5,13 @@ import { authenticatedProfile } from "../../middleware/authenticate.js";
 import { AppError } from "../../shared/errors.js";
 export type OrganizationManagement = Pick<
   OrganizationManagementRepository,
-  "list" | "detail" | "mine" | "decide" | "setPermissions" | "assertCanPublish"
+  | "list"
+  | "detail"
+  | "mine"
+  | "members"
+  | "decide"
+  | "setPermissions"
+  | "assertCanPublish"
 >;
 const types = z
   .array(z.enum(["social_service", "internship"]))

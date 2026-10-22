@@ -33,6 +33,14 @@ function actor(res: Parameters<typeof authenticatedProfile>[0]) {
 }
 export function publisherOffersRouter(repo: OffersRepository) {
   const router = Router();
+  router.get("/resumen", async (req, res) => {
+    z.object({}).strict().parse(req.query);
+    res.json({
+      data: await repo.publisherSummary(authenticatedProfile(res).id),
+      error: null,
+      meta: null,
+    });
+  });
   router.get("/ofertas", async (req, res) =>
     res.json({
       data: await repo.list(actor(res), filters.parse(req.query)),

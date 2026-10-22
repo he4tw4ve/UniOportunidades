@@ -1,12 +1,12 @@
-# Contratos API · Fase 5
+# Contratos API · Fase 8
 
-Base: `/api/v1`. Respuesta `{data,error,meta}`. Healthcheck informa `phase:5`. Las rutas de Auth/perfil/roles llevan `Cache-Control: no-store`. Token solo en `Authorization: Bearer <access_token>`, nunca en URL. JSON no válido o campos extra en mutaciones se rechazan con 400.
+Base: `/api/v1`. Respuesta `{data,error,meta}`. Healthcheck devuelve estado neutral, sin `phase`. Las rutas de Auth/perfil/roles llevan `Cache-Control: no-store`. Token solo en `Authorization: Bearer <access_token>`, nunca en URL. JSON no válido o campos extra en mutaciones se rechazan con 400.
 
 ## Indicadores de Fase 5
 
 GET `/admin/metricas`, solo administrador con perfil activo. Devuelve `{ofertas_pendientes,organizaciones_pendientes,publicadas,proximas_a_vencer}` con enteros no negativos. Pendientes cuenta revisiones pending; organizaciones pendientes cuenta estado pending. Publicadas aplica exactamente las condiciones del catálogo. Próximas a vencer es el subconjunto con fecha entre hoy y hoy + 7 días inclusive, en Hermosillo. Una sola consulta SQL obtiene un snapshot coherente. No revela cuentas ni contenido. Sin token: 401; otros roles: 403.
 
-GET `/admin/usuarios` sigue siendo consulta de hasta 100 perfiles, sin edición de roles. Los timeouts de conexión conocidos responden 503 `SERVICE_UNAVAILABLE`, sin mensajes crudos ni secretos.
+GET `/admin/usuarios` ofrece el directorio paginado de solo lectura descrito abajo. Los timeouts de conexión conocidos responden 503 `SERVICE_UNAVAILABLE`, sin mensajes crudos ni secretos.
 
 ## Catálogo de Fase 4
 
@@ -22,15 +22,15 @@ Estudiantes con carrera usan inicialmente mine salvo filtro explícito de carrer
 
 Listado y detalle comparten puntero publicado perteneciente a la oferta, revisión approved, oferta open, organización approved y fecha límite igual o posterior a hoy en America/Hermosillo. Una revisión pendiente no participa en contenido, búsqueda ni filtros. Sin solicitud interna.
 
-| Método y ruta                           | Acceso                              | Contrato                                                                                                                                                                      |
-| --------------------------------------- | ----------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| GET `/health`                           | Público                             | `status`, `service`, `phase:5`, `authentication:configured/not_configured`, `database:available/not_configured/unavailable`; DB se prueba con SELECT 1, caída DB devuelve 503 |
-| POST `/auth/estudiantes/iniciar-sesion` | Público, limitado                   | `{expediente,password}`; resuelve email demo en DB, autentica con Auth, verifica perfil student activo; devuelve tokens para `setSession`                                     |
-| POST `/auth/correo/iniciar-sesion`      | Público, limitado                   | `{email,password}`; login publisher/admin o usuario confirmado sin perfil aún; no permite student ni inactivos                                                                |
-| GET `/auth/yo`                          | Token validado + perfil activo      | Perfil `{id,nombre_completo,email,rol,activo,estudiante,organizacion}`; carrera y permisos desde SQL                                                                          |
-| POST `/organizaciones/registro`         | Token + correo confirmado, limitado | `{nombre_completo,nombre,tipo,email_contacto,descripcion?}`; 201 `{id,estado:pending,permisos:[]}`; no acepta uid/rol/estado/permisos                                         |
-| GET `/organizaciones/mia`               | Publisher activo                    | Organización del perfil y permisos                                                                                                                                            |
-| GET `/admin/usuarios`                   | Admin activo                        | Hasta 100 perfiles, sin secretos ni contraseñas; `meta.limit=100`                                                                                                             |
+| Método y ruta                           | Acceso                              | Contrato                                                                                                                                                           |
+| --------------------------------------- | ----------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GET `/health`                           | Público                             | `status`, `service`, `authentication:configured/not_configured`, `database:available/not_configured/unavailable`; DB se prueba con SELECT 1, caída DB devuelve 503 |
+| POST `/auth/estudiantes/iniciar-sesion` | Público, limitado                   | `{expediente,password}`; resuelve email demo en DB, autentica con Auth, verifica perfil student activo; devuelve tokens para `setSession`                          |
+| POST `/auth/correo/iniciar-sesion`      | Público, limitado                   | `{email,password}`; login publisher/admin o usuario confirmado sin perfil aún; no permite student ni inactivos                                                     |
+| GET `/auth/yo`                          | Token validado + perfil activo      | Perfil `{id,nombre_completo,email,rol,activo,estudiante,organizacion}`; carrera y permisos desde SQL                                                               |
+| POST `/organizaciones/registro`         | Token + correo confirmado, limitado | `{nombre_completo,nombre,tipo,email_contacto,descripcion?}`; 201 `{id,estado:pending,permisos:[]}`; no acepta uid/rol/estado/permisos                              |
+| GET `/organizaciones/mia`               | Publisher activo                    | Organización del perfil y permisos                                                                                                                                 |
+| GET `/admin/usuarios`                   | Admin activo                        | Directorio paginado mínimo `{items,total,page,pageSize}`; filtros de Fase 7                                                                                        |
 
 El endpoint de login por email se añadió para mantener errores uniformes y limitador en Express. El signup sigue usando Supabase Auth en navegador con confirmación de email y límites del proveedor; no hay registro público de estudiantes o admin.
 
@@ -42,7 +42,7 @@ Todo `/admin/*` y `/publicador/*` pasa primero por sesión/perfil/rol, incluso r
 
 ## Organizaciones y permisos
 
-El healthcheck ahora informa `phase:5`. Los endpoints Auth conservan su contrato.
+El healthcheck conserva status/service/authentication/database; desde Fase 8 ya no incluye la fase de desarrollo. Los endpoints Auth conservan su formato de respuesta.
 
 | Método/ruta                               | Acceso    | Datos                                                                                                                      |
 | ----------------------------------------- | --------- | -------------------------------------------------------------------------------------------------------------------------- |
@@ -99,3 +99,39 @@ Las correcciones admin no descartan drafts/pending del publicador: 409 `OPEN_REV
 Errores principales: 404 `OFFER_NOT_FOUND` para inexistencia o propietario ajeno; 403 por rol/organización/permiso; 409 `REVISION_FROZEN`, `OPEN_REVISION`, `ALREADY_DECIDED`, `STALE_OFFER`, `OFFER_ARCHIVED`, `NO_PUBLICATION` o `INVALID_STATE`; 400 por campos/carreras/contacto/vigencia de envío inválidos. No se incluyen secretos ni errores crudos de SQL.
 
 `revisiones[]` conserva decisión, motivo, fecha y administrador. `auditoria[]` contiene eventos de alta, revisión y permisos con antes/después, actor y fecha. No contiene tokens/contraseñas. El publicador no puede leer el detalle de otras organizaciones ni usar las rutas de admin para concederse permisos.
+
+## Directorios y panel · Fase 7
+
+Todos estos endpoints requieren token verificado y perfil activo, devuelven `{data,error:null,meta:null}` y `Cache-Control: no-store`.
+
+### GET `/admin/usuarios`
+
+Solo admin. Query estricta: `q?` (nombre o correo, trim, máximo 150 caracteres), `rol?=student|publisher|admin`, `activo?=true|false`, `page=1` (entero 1–100000), `pageSize=20` (entero 1–50). Desconocidos, duplicados/arrays o valores inválidos responden 400. La búsqueda es literal, insensible a mayúsculas y usa SQL parametrizado; `%`, `_` y barra inversa no son comodines del usuario. Orden `created_at DESC,id`. No tiene límite global de 100 cuentas.
+
+Data: `{items:[{id,nombre_completo,email,rol,activo}],total,page,pageSize}`. Total y página comparten snapshot; página fuera de resultados conserva el total y devuelve `items:[]`. No incluye expediente, carrera, metadata de Auth ni datos sensibles adicionales. No hay endpoints nuevos de escritura o gestión de cuentas. Sin token: 401; otros roles o perfil inactivo: 403.
+
+### GET `/publicador/miembros`
+
+Solo publisher. No admite parámetros, especialmente ningún ID de organización. La API deriva la organización desde el ID autenticado y `miembros_organizacion`. Data: `{organizacion:{nombre},items:[{nombre_completo,email,rol_interno:'representative',activo}]}`. Correo es el de cuenta del miembro para consulta interna; activo representa el estado de perfil (el modelo no tiene otro estado de membresía). Orden por nombre/correo. Incluye miembros inactivos existentes, sin inventar integrantes. Un miembro se muestra como tal. Publicador sin membresía: 403 `MEMBERSHIP_REQUIRED`. Otros roles: 403; token inválido/ausente: 401. Se permite consultar la propia organización pendiente, rechazada o suspendida, manteniendo la política de lectura existente. No ofrece invitaciones, altas/bajas ni cambios de roles.
+
+### GET `/publicador/resumen`
+
+Solo publisher, sin parámetros. Data: `{total,borradores,en_revision,rechazadas,publicadas,activas,recientes}`. `recientes` tiene hasta cinco filas con el mismo contrato de ítem de `/publicador/ofertas`, en orden `ofertas.updated_at DESC,id`. Cuenta únicamente ofertas de la membresía autenticada; sin ofertas devuelve ceros y `[]`.
+
+- `total`: todas las oportunidades propias, incluidas archivadas.
+- `borradores`, `en_revision`, `rechazadas`: estado de la revisión con mayor número de versión (`draft`, `pending`, `rejected`) de oportunidades no archivadas.
+- `publicadas`: puntero publicado a revisión aprobada perteneciente a la oferta, excluyendo archivadas; puede incluir cerradas, vencidas u organización suspendida.
+- `activas`: publicadas con estado `open`, organización `approved` y fecha límite de la revisión publicada igual o posterior a hoy en America/Hermosillo; coincide con la visibilidad del catálogo.
+
+Los grupos se superponen: una nueva edición `pending` no reemplaza el puntero aprobado ni altera su fecha. Las métricas y cinco recientes se calculan juntas sin N+1. Sin migración ni cambios en las reglas de aprobación o permisos.
+
+## Controles HTTP y fiabilidad · Fase 8
+
+- GET `/health` devuelve `{status:'ok'|'degraded',service:'unioportunidades-api',authentication:'configured'|'not_configured',database:'available'|'not_configured'|'unavailable'}`. Retira `phase`; se actualizaron el contrato Zod y las pruebas. Error de DB: 503 con estado degradado, sin detalles de conexión.
+- Todas las respuestas API usan no-store y cabeceras nosniff/no-referrer/DENY/CSP de API. CORS permite el origen exacto de WEB_ORIGIN, sin cookies; otros orígenes (incluido null) reciben 403 `ORIGIN_NOT_ALLOWED`. Preflight solo para métodos previstos y Authorization/Content-Type. Peticiones sin Origin siguen requiriendo token en las rutas protegidas.
+- JSON máximo 100 kB y sin compresión: exceso → 413 `BODY_TOO_LARGE`; encoding/charset no admitido → 415 `UNSUPPORTED_ENCODING`; JSON roto → 400 `INVALID_JSON`. Búsquedas mantienen máximo 150 y paginación acotada.
+- Login por correo y expediente comparten 10 intentos por IP en 15 min. Registro de organización tiene cupo separado de 5/15 min. 429 `TOO_MANY_REQUESTS`; el limitador local incluye Retry-After. El signup de credenciales directo en Supabase se rige por límites/configuración del proveedor.
+- `TRUST_PROXY` es opt-in mediante IPs/CIDRs; por defecto no confía en XFF. No se admiten true, número de saltos ni /0 desde entorno. Ver topología y riesgos en `security-review.md`.
+- Token rechazado/caducado → 401; perfil deshabilitado/rol no permitido → 403. Caída de red/5xx de Auth → 503 `AUTH_UNAVAILABLE`, sin interpretar la caída como token inválido. Respuestas 429 del proveedor usan error genérico de límite.
+- Transporte Auth: 8 s. Cliente web: 15 s y cancelación combinada. Pool: adquisición 10 s, consulta SQL 15 s, espera de lock 5 s, timeout de query cliente 20 s e idle-in-transaction 15 s. Caídas/locks transitorios normalizados a 503 `SERVICE_UNAVAILABLE`, sin SQL ni datos de conexión.
+- Perfil en UI revalidado cada 60 s. La conservación por fallo temporal vence al expirar el token o a 5 min desde la última validación exitosa de perfil, lo que suceda primero. Renovar token no extiende un perfil sin verificar. No cambian permisos, propiedad ni reglas de moderación del backend.

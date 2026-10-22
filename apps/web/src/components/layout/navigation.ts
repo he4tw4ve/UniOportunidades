@@ -105,6 +105,12 @@ export function navigationFor(
         icon: Building2,
         group: "Mi organización",
       },
+      {
+        to: "/publicador/miembros",
+        label: "Miembros de mi organización",
+        icon: Users,
+        group: "Mi organización",
+      },
     ];
   return common;
 }

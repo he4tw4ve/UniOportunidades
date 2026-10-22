@@ -147,6 +147,17 @@ const listSchema = z.object({
   page: z.number(),
   pageSize: z.number(),
 });
+export const publisherSummarySchema = z.object({
+  total: z.number().int().nonnegative(),
+  borradores: z.number().int().nonnegative(),
+  en_revision: z.number().int().nonnegative(),
+  rechazadas: z.number().int().nonnegative(),
+  publicadas: z.number().int().nonnegative(),
+  activas: z.number().int().nonnegative(),
+  recientes: listSchema.shape.items.max(5),
+});
+export const getPublisherSummary = (token: string, signal?: AbortSignal) =>
+  apiRequest("/publicador/resumen", publisherSummarySchema, { token, signal });
 export const degreesSchema = z.array(
   z.object({
     id: z.string(),

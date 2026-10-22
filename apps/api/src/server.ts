@@ -50,12 +50,25 @@ const server = createApp(
         await pool.query("SELECT 1");
       }
     : undefined,
+  { trustProxy: env.TRUST_PROXY },
 ).listen(env.PORT, "127.0.0.1", () =>
   console.log(`API disponible en http://127.0.0.1:${env.PORT}/api/v1/health`),
 );
+server.requestTimeout = 30000;
+server.headersTimeout = 10000;
+server.keepAliveTimeout = 5000;
+let closing = false;
 for (const signal of ["SIGINT", "SIGTERM"])
-  process.on(signal, () =>
+  process.once(signal, () => {
+    if (closing) return;
+    closing = true;
+    const deadline = setTimeout(() => server.closeAllConnections(), 10000);
+    deadline.unref();
     server.close(() => {
-      void pool?.end();
-    }),
-  );
+      clearTimeout(deadline);
+      void pool
+        ?.end()
+        .catch(() => console.error("No se pudo finalizar el pool PostgreSQL."));
+    });
+    server.closeIdleConnections();
+  });

@@ -7,11 +7,39 @@ export function createApp(
   origin = "http://127.0.0.1:5173",
   auth?: AuthDependencies,
   checkDatabase?: () => Promise<void>,
+  options: { trustProxy?: false | string[] } = {},
 ) {
   const app = express();
   app.disable("x-powered-by");
-  app.use(cors({ origin, methods: ["GET", "POST", "PUT", "PATCH", "DELETE"] }));
-  app.use(express.json({ limit: "100kb" }));
+  app.set("trust proxy", options.trustProxy ?? false);
+  app.use((_req, res, next) => {
+    res.set({
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff",
+      "Referrer-Policy": "no-referrer",
+      "X-Frame-Options": "DENY",
+      "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+    });
+    next();
+  });
+  app.use(
+    cors({
+      origin: (requested, done) =>
+        done(
+          requested && requested !== origin
+            ? new AppError(
+                403,
+                "ORIGIN_NOT_ALLOWED",
+                "El origen no está permitido.",
+              )
+            : null,
+          !!requested,
+        ),
+      methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+      allowedHeaders: ["Authorization", "Content-Type"],
+    }),
+  );
+  app.use(express.json({ limit: "100kb", inflate: false }));
   app.get("/api/v1/health", async (_req, res) => {
     let database = "not_configured";
     if (checkDatabase) {
@@ -26,7 +54,6 @@ export function createApp(
       data: {
         status: database === "unavailable" ? "degraded" : "ok",
         service: "unioportunidades-api",
-        phase: 5,
         authentication: auth ? "configured" : "not_configured",
         database,
       },

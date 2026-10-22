@@ -6,7 +6,9 @@ import {
   OrganizationHistory,
   OrganizationInfo,
   QueryMessage,
+  StatusBadge,
 } from "@/components/organizations/OrganizationInfo";
+import { offerTypes, typeLabels } from "@/lib/organizations";
 import { Button } from "@/components/ui/button";
 import { PublisherOverview } from "./PublisherOverview";
 export function OrganizationDashboard({
@@ -82,7 +84,34 @@ export function OrganizationDashboard({
               }[org.estado]
             }
           </div>
-          <OrganizationInfo org={org} />
+          {overview ? (
+            <section className="surface-panel">
+              <div className="section-heading">
+                <h2>{org.nombre}</h2>
+                <StatusBadge status={org.estado} />
+              </div>
+              <ul className="flex flex-wrap gap-3 text-sm">
+                {offerTypes.map((type) => (
+                  <li key={type}>
+                    {typeLabels[type]}:{" "}
+                    {org.estado === "approved" && org.permisos.includes(type)
+                      ? "Habilitado"
+                      : "Bloqueado"}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-4 flex flex-wrap gap-4 text-sm font-semibold text-primary underline">
+                <Link to="/publicador/organizacion">
+                  Información, permisos e historial
+                </Link>
+                <Link to="/publicador/miembros">
+                  Miembros de mi organización
+                </Link>
+              </div>
+            </section>
+          ) : (
+            <OrganizationInfo org={org} />
+          )}
           {overview && session && (
             <PublisherOverview
               token={session.access_token}
@@ -90,29 +119,28 @@ export function OrganizationDashboard({
               canPublish={org.estado === "approved" && org.permisos.length > 0}
             />
           )}
-          {overview ? (
-            <details className="surface-panel">
-              <summary className="cursor-pointer font-semibold">
-                Historial y auditoría de mi organización
-              </summary>
-              <div className="mt-5">
-                <OrganizationHistory org={org} />
-              </div>
-            </details>
-          ) : (
-            <OrganizationHistory org={org} />
+          {!overview && (
+            <>
+              <OrganizationHistory org={org} />
+              <section className="rounded-xl bg-muted p-5">
+                <h2 className="font-semibold">Publicación de oportunidades</h2>
+                <p className="mt-2 text-sm">
+                  Crea borradores y envía oportunidades a revisión según los
+                  permisos de tu organización. Las ediciones pendientes
+                  conservan la última versión aprobada.
+                </p>
+                <Button className="mt-4" asChild>
+                  <Link to="/publicador/ofertas">Ver mis oportunidades</Link>
+                </Button>
+              </section>
+              <Link
+                className="inline-block font-semibold text-primary underline"
+                to="/publicador/miembros"
+              >
+                Miembros de mi organización
+              </Link>
+            </>
           )}
-          <section className="rounded-xl bg-muted p-5">
-            <h2 className="font-semibold">Publicación de oportunidades</h2>
-            <p className="mt-2 text-sm">
-              Crea borradores y envía oportunidades a revisión según los
-              permisos de tu organización. Las ediciones pendientes conservan la
-              última versión aprobada.
-            </p>
-            <Button className="mt-4" asChild>
-              <Link to="/publicador/ofertas">Ver mis oportunidades</Link>
-            </Button>
-          </section>
         </>
       )}
     </div>

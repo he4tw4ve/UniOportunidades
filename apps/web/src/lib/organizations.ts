@@ -107,6 +107,22 @@ export const getMyOrganization = (token: string, signal?: AbortSignal) =>
     token,
     signal,
   });
+export const organizationMembersSchema = z.object({
+  organizacion: z.object({ nombre: z.string() }),
+  items: z.array(
+    z.object({
+      nombre_completo: z.string(),
+      email: z.email(),
+      rol_interno: z.literal("representative"),
+      activo: z.boolean(),
+    }),
+  ),
+});
+export const getMyOrganizationMembers = (token: string, signal?: AbortSignal) =>
+  apiRequest("/publicador/miembros", organizationMembersSchema, {
+    token,
+    signal,
+  });
 export type OrganizationDecision = {
   decision: "approved" | "rejected" | "suspended";
   comentario?: string;

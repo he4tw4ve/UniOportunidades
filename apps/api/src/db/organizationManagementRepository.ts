@@ -82,6 +82,35 @@ export class OrganizationManagementRepository {
     );
     return member.rows[0] ? this.detail(member.rows[0].organizacion_id) : null;
   }
+  async members(userId: string) {
+    // Scope comes exclusively from the active publisher's membership, never a client ID.
+    const result = await this.pool.query<{
+      organizacion: { nombre: string };
+      items: {
+        nombre_completo: string;
+        email: string;
+        rol_interno: string;
+        activo: boolean;
+      }[];
+    }>(
+      `SELECT json_build_object('nombre',o.nombre) AS organizacion,
+      COALESCE((SELECT json_agg(member ORDER BY member.nombre_completo,member.email) FROM
+        (SELECT p.nombre_completo,p.email,m.rol_interno,p.activo
+         FROM public.miembros_organizacion m JOIN public.perfiles p ON p.id=m.usuario_id
+         WHERE m.organizacion_id=o.id) member),'[]'::json) AS items
+      FROM public.miembros_organizacion own JOIN public.organizaciones o ON o.id=own.organizacion_id
+      JOIN public.perfiles actor ON actor.id=own.usuario_id
+      WHERE own.usuario_id=$1 AND actor.rol='publisher' AND actor.activo=true`,
+      [userId],
+    );
+    if (!result.rows[0])
+      throw new AppError(
+        403,
+        "MEMBERSHIP_REQUIRED",
+        "Tu cuenta no tiene una membresía de organización.",
+      );
+    return result.rows[0];
+  }
   private async admin(db: Queryable, actor: string) {
     const result = await db.query(
       "SELECT id FROM public.perfiles WHERE id=$1 AND rol='admin' AND activo=true FOR SHARE",

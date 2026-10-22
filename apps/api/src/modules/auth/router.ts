@@ -13,6 +13,7 @@ import {
 } from "../../middleware/authenticate.js";
 import { authLimiter } from "../../middleware/limiter.js";
 import { AppError } from "../../shared/errors.js";
+import { usersQuerySchema } from "../admin/validation.js";
 import type { OffersRepository } from "../../db/offersRepository.js";
 import { publisherOffersRouter, adminOffersRouter } from "../offers/router.js";
 import type { CatalogRepository } from "../../db/catalogRepository.js";
@@ -38,6 +39,7 @@ export function authRoutes(deps: AuthDependencies) {
   const verify = authenticate(deps.gateway),
     profile = requireProfile(deps.profiles);
   const limiter = authLimiter();
+  const registrationLimiter = authLimiter(5);
   router.use((_req, res, next) => {
     res.set("Cache-Control", "no-store");
     next();
@@ -73,36 +75,41 @@ export function authRoutes(deps: AuthDependencies) {
   router.get("/auth/yo", verify, profile, (_req, res) =>
     res.json({ data: authenticatedProfile(res), error: null, meta: null }),
   );
-  router.post("/organizaciones/registro", limiter, verify, async (req, res) => {
-    const input = z
-      .object({
-        nombre_completo: z.string().trim().min(2).max(150),
-        nombre: z.string().trim().min(2).max(200),
-        tipo: z.enum([
-          "company",
-          "university",
-          "government",
-          "nonprofit",
-          "other",
-        ]),
-        email_contacto: z.email().max(254),
-        descripcion: z.string().trim().max(3000).optional(),
-      })
-      .strict()
-      .parse(req.body);
-    const user = authenticatedUser(res);
-    if (!user.email)
-      throw new AppError(
-        403,
-        "EMAIL_REQUIRED",
-        "Se requiere un correo verificado.",
-      );
-    res.status(201).json({
-      data: await deps.organizations.register(user.id, user.email, input),
-      error: null,
-      meta: null,
-    });
-  });
+  router.post(
+    "/organizaciones/registro",
+    registrationLimiter,
+    verify,
+    async (req, res) => {
+      const input = z
+        .object({
+          nombre_completo: z.string().trim().min(2).max(150),
+          nombre: z.string().trim().min(2).max(200),
+          tipo: z.enum([
+            "company",
+            "university",
+            "government",
+            "nonprofit",
+            "other",
+          ]),
+          email_contacto: z.email().max(254),
+          descripcion: z.string().trim().max(3000).optional(),
+        })
+        .strict()
+        .parse(req.body);
+      const user = authenticatedUser(res);
+      if (!user.email)
+        throw new AppError(
+          403,
+          "EMAIL_REQUIRED",
+          "Se requiere un correo verificado.",
+        );
+      res.status(201).json({
+        data: await deps.organizations.register(user.id, user.email, input),
+        error: null,
+        meta: null,
+      });
+    },
+  );
   router.use("/admin", verify, profile, requireRole("admin"));
   if (deps.admin)
     router.get("/admin/metricas", async (_req, res) =>
@@ -114,14 +121,25 @@ export function authRoutes(deps: AuthDependencies) {
       "/admin/organizaciones",
       adminOrganizationsRouter(deps.organizationManagement),
     );
-  router.get("/admin/usuarios", async (_req, res) =>
+  router.get("/admin/usuarios", async (req, res) =>
     res.json({
-      data: await deps.profiles.list(),
+      data: await deps.profiles.list(usersQuerySchema.parse(req.query)),
       error: null,
-      meta: { limit: 100 },
+      meta: null,
     }),
   );
   router.use("/publicador", verify, profile, requireRole("publisher"));
+  if (deps.organizationManagement)
+    router.get("/publicador/miembros", async (req, res) => {
+      z.object({}).strict().parse(req.query);
+      res.json({
+        data: await deps.organizationManagement!.members(
+          authenticatedProfile(res).id,
+        ),
+        error: null,
+        meta: null,
+      });
+    });
   if (deps.offers)
     router.use("/publicador", publisherOffersRouter(deps.offers));
   else if (deps.organizationManagement)

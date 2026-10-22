@@ -4,6 +4,26 @@ import { ZodError } from "zod";
 import { safeDatabaseError } from "../db/diagnostics.js";
 export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
   const known = error instanceof AppError;
+  const bodyFailure =
+    error && typeof error === "object" && "type" in error ? error.type : null;
+  if (
+    bodyFailure === "entity.too.large" ||
+    bodyFailure === "encoding.unsupported" ||
+    bodyFailure === "charset.unsupported"
+  ) {
+    const tooLarge = bodyFailure === "entity.too.large";
+    res.status(tooLarge ? 413 : 415).json({
+      data: null,
+      error: {
+        code: tooLarge ? "BODY_TOO_LARGE" : "UNSUPPORTED_ENCODING",
+        message: tooLarge
+          ? "El cuerpo de la solicitud supera el límite permitido."
+          : "Envía JSON sin compresión y con codificación UTF-8.",
+      },
+      meta: null,
+    });
+    return;
+  }
   if (error instanceof ZodError) {
     res.status(400).json({
       data: null,
@@ -29,6 +49,14 @@ export const errorHandler: ErrorRequestHandler = (error, _req, res, _next) => {
       "ENETUNREACH",
       "EHOSTUNREACH",
       "57014",
+      "55P03",
+      "57P01",
+      "57P02",
+      "57P03",
+      "53300",
+      "08001",
+      "08003",
+      "08006",
     ].includes(diagnostic.code);
   if (unavailable) {
     console.error("Dependencia de conexión no disponible:", diagnostic.code);

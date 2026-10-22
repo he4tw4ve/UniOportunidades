@@ -43,6 +43,14 @@ const explanations: Record<string, string> = {
     "Falta una tabla requerida. Comprueba que sea un proyecto Supabase con auth.users y que el esquema esté preparado.",
   "42601": "PostgreSQL detectó un error de sintaxis en la migración.",
   "57014": "PostgreSQL canceló una consulta por tiempo de espera.",
+  "55P03": "PostgreSQL agotó la espera de un bloqueo.",
+  "57P01": "PostgreSQL está reiniciando la conexión.",
+  "57P02": "PostgreSQL no está disponible temporalmente.",
+  "57P03": "PostgreSQL no acepta conexiones temporalmente.",
+  "53300": "PostgreSQL alcanzó su límite de conexiones.",
+  "08001": "No se pudo establecer la conexión PostgreSQL.",
+  "08003": "La conexión PostgreSQL no está disponible.",
+  "08006": "La conexión PostgreSQL se interrumpió.",
 };
 export function safeDatabaseError(error: unknown): {
   code: string;

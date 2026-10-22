@@ -1,4 +1,10 @@
 import { test, expect, type Page } from "@playwright/test";
+test.beforeEach(async ({ request }) => {
+  const response = await request.post(
+    "http://127.0.0.1:3101/__test/reset-http-state",
+  );
+  expect(response.status()).toBe(204);
+});
 async function login(
   page: Page,
   role: "student" | "admin" | "publisher",
@@ -451,4 +457,313 @@ test("publicador con permiso único crea sin elegir un tipo no autorizado", asyn
       () => document.documentElement.scrollWidth <= innerWidth,
     ),
   ).toBe(true);
+});
+
+test("Fase 7: directorio completo con búsqueda, filtros, paginación y móvil", async ({
+  page,
+}, info) => {
+  await login(page, "admin");
+  await page.getByRole("link", { name: "Usuarios", exact: true }).click();
+  await expect(page.getByRole("table")).toBeVisible();
+  await page.getByLabel("Nombre o correo").fill("publicador");
+  await page.getByRole("button", { name: "Buscar", exact: true }).click();
+  await page.getByLabel("Rol", { exact: true }).selectOption("publisher");
+  await page.getByLabel("Estado", { exact: true }).selectOption("true");
+  await expect(
+    page.getByText("3 cuentas encontradas", { exact: false }),
+  ).toBeVisible();
+  await expect(page.getByRole("table").getByRole("row")).toHaveCount(4);
+  await page.getByLabel("Nombre o correo").fill("no-existe-fase-7");
+  await page.getByRole("button", { name: "Buscar", exact: true }).click();
+  await expect(
+    page.getByText("No hay usuarios para estos filtros."),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Siguiente", exact: true }),
+  ).toBeDisabled();
+  await page.getByRole("button", { name: "Limpiar filtros" }).click();
+  await expect(page.getByRole("table")).toBeVisible();
+  await expect(page.getByText(/31 cuentas encontradas/)).toBeVisible();
+  await page.getByRole("button", { name: "Siguiente", exact: true }).click();
+  await expect(page.getByText(/Página 2 de 2/)).toBeVisible();
+  await expect(page.getByRole("table").getByRole("row")).toHaveCount(12);
+  await page.getByRole("button", { name: "Anterior", exact: true }).click();
+  await expect(page.getByText(/Página 1 de 2/)).toBeVisible();
+  await page.screenshot({ path: info.outputPath("usuarios-escritorio.png") });
+  await page.setViewportSize({ width: 360, height: 800 });
+  expect(
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth,
+    ),
+  ).toBe(true);
+  await page.screenshot({ path: info.outputPath("usuarios-movil.png") });
+  await page.reload();
+  await expect(
+    page.getByRole("heading", { name: "Usuarios", exact: true }),
+  ).toBeVisible();
+});
+
+test("Fase 7: panel y miembros propios con organización aprobada y pendiente", async ({
+  page,
+}, info) => {
+  for (const email of [
+    "publicador3@demo.unioportunidades.test",
+    "publicador2@demo.unioportunidades.test",
+  ]) {
+    await login(page, "publisher", email);
+    await expect(
+      page.getByText("Activas en catálogo", { exact: true }),
+    ).toBeVisible();
+    if (email.startsWith("publicador3")) {
+      const create = page
+        .getByRole("main")
+        .getByRole("link", { name: "Crear oportunidad", exact: true });
+      await expect(create).toHaveCSS("color", "rgb(255, 255, 255)");
+    }
+    await page.screenshot({
+      path: info.outputPath(
+        email.startsWith("publicador3")
+          ? "panel-aprobado.png"
+          : "panel-pendiente.png",
+      ),
+      fullPage: true,
+    });
+    await page
+      .getByRole("main")
+      .getByRole("link", { name: "Miembros de mi organización", exact: true })
+      .click();
+    await expect(
+      page.getByRole("heading", {
+        name: "Miembros de mi organización",
+        exact: true,
+      }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("table").getByText(email, { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("table").getByRole("row")).toHaveCount(2);
+    await page.reload();
+    await expect(
+      page.getByRole("table").getByText(email, { exact: true }),
+    ).toBeVisible();
+    await page.setViewportSize({ width: 360, height: 800 });
+    expect(
+      await page.evaluate(
+        () => document.documentElement.scrollWidth <= innerWidth,
+      ),
+    ).toBe(true);
+    await page.screenshot({
+      path: info.outputPath(
+        email.startsWith("publicador3")
+          ? "miembros-aprobado.png"
+          : "miembros-pendiente.png",
+      ),
+    });
+    await page.goto("/mi-perfil");
+    await page
+      .getByRole("button", { name: "Cerrar sesión", exact: true })
+      .click();
+    await page.setViewportSize({ width: 1280, height: 800 });
+  }
+});
+
+test("Fase 7: dos pestañas conservan trabajo al enfocar y propagan cierre real", async ({
+  page,
+  context,
+}) => {
+  await login(page, "admin");
+  await expect(page).toHaveURL(/admin\/panel/);
+  await page.goto("/admin/usuarios");
+  await expect(page.getByRole("table")).toBeVisible();
+  const second = await context.newPage();
+  await second.goto("/admin/usuarios");
+  await expect(second.getByRole("table")).toBeVisible();
+  await page.getByLabel("Nombre o correo").fill("Texto sin enviar");
+  await second.getByLabel("Nombre o correo").fill("Otra pestaña");
+  for (const tab of [page, second]) {
+    await tab.evaluate(() => {
+      const watch = { loading: false, inputRemoved: false };
+      const input = document.querySelector("input");
+      (window as unknown as { authWatch: typeof watch }).authWatch = watch;
+      new MutationObserver(() => {
+        if (document.body.textContent?.includes("Validando sesión…"))
+          watch.loading = true;
+        if (input && !input.isConnected) watch.inputRemoved = true;
+      }).observe(document.body, {
+        subtree: true,
+        childList: true,
+        characterData: true,
+      });
+    });
+  }
+  for (let count = 0; count < 12; count++) {
+    await second.bringToFront();
+    await page.bringToFront();
+  }
+  await expect(page.getByLabel("Nombre o correo")).toHaveValue(
+    "Texto sin enviar",
+  );
+  await expect(second.getByLabel("Nombre o correo")).toHaveValue(
+    "Otra pestaña",
+  );
+  for (const tab of [page, second])
+    expect(
+      await tab.evaluate(
+        () => (window as unknown as { authWatch: unknown }).authWatch,
+      ),
+    ).toEqual({ loading: false, inputRemoved: false });
+  await page.goto("/mi-perfil");
+  await page
+    .getByRole("button", { name: "Cerrar sesión", exact: true })
+    .click();
+  await expect(page).toHaveURL(/iniciar-sesion/);
+  await expect(second).toHaveURL(/iniciar-sesion/);
+  await expect(second.getByRole("table")).toHaveCount(0);
+  await second.close();
+});
+
+test("Fase 8: HTTP no expone borradores, privilegios ni ofertas de otra organización", async ({
+  request,
+}) => {
+  const base = "http://127.0.0.1:3101/api/v1";
+  const token = async (email: string) => {
+    const response = await request.post(base + "/auth/correo/iniciar-sesion", {
+      data: { email, password: "LocalTestOnly-123!" },
+    });
+    expect(response.status()).toBe(200);
+    return (await response.json()).data.access_token as string;
+  };
+  const owner = await token("publicador1@demo.unioportunidades.test"),
+    other = await token("publicador3@demo.unioportunidades.test");
+  const response = await request.post(
+    base + "/auth/estudiantes/iniciar-sesion",
+    { data: { expediente: "DEMO-001", password: "LocalTestOnly-123!" } },
+  );
+  const student = (await response.json()).data.access_token as string;
+  const headers = { Authorization: `Bearer ${owner}` };
+  const list = (
+    await (await request.get(base + "/publicador/ofertas", { headers })).json()
+  ).data;
+  const source = (
+    await (
+      await request.get(base + `/publicador/ofertas/${list.items[0].id}`, {
+        headers,
+      })
+    ).json()
+  ).data.revisiones[0];
+  const fields = [
+    "titulo",
+    "descripcion",
+    "actividades",
+    "requisitos",
+    "beneficios",
+    "modalidad",
+    "ciudad",
+    "estado_region",
+    "cupos",
+    "fecha_limite",
+    "duracion_info",
+    "alcance_carreras",
+    "carreras",
+    "contacto_nombre",
+    "contacto_email",
+    "contacto_url",
+    "contacto_instrucciones",
+  ];
+  const contenido = {
+    ...Object.fromEntries(fields.map((key) => [key, source[key] ?? ""])),
+    titulo: "PRIVADO Fase8",
+    fecha_limite: "2099-12-31",
+  };
+  const created = await request.post(base + "/publicador/ofertas", {
+    headers,
+    data: { tipo: "internship", contenido },
+  });
+  expect(created.status()).toBe(201);
+  const draft = (await created.json()).data;
+  expect(
+    (
+      await request.get(base + `/ofertas/${draft.id}`, {
+        headers: { Authorization: `Bearer ${student}` },
+      })
+    ).status(),
+  ).toBe(404);
+  expect(
+    (
+      await request.get(base + `/publicador/ofertas/${draft.id}`, {
+        headers: { Authorization: `Bearer ${other}` },
+      })
+    ).status(),
+  ).toBe(404);
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const submit = await request.post(
+      base + `/publicador/revisiones/${draft.revisiones[0].id}/enviar`,
+      { headers, data: { version: draft.revisiones[0].version } },
+    );
+    expect(submit.status()).toBe(attempt === 0 ? 200 : 409);
+  }
+  const catalog = await request.get(
+    base + "/ofertas?q=PRIVADO%20Fase8&alcance=all",
+    { headers: { Authorization: `Bearer ${student}` } },
+  );
+  expect((await catalog.json()).data.total).toBe(0);
+  expect(
+    (await request.get(base + "/admin/usuarios", { headers })).status(),
+  ).toBe(403);
+  expect(
+    (
+      await request.get(
+        base + `/publicador/miembros?organizacion_id=${draft.organizacion_id}`,
+        { headers: { Authorization: `Bearer ${other}` } },
+      )
+    ).status(),
+  ).toBe(400);
+  expect(
+    (
+      await request.get(base + "/auth/yo", {
+        headers: { Authorization: "Bearer expired-fixture" },
+      })
+    ).status(),
+  ).toBe(401);
+});
+
+test("Fase 8: caída temporal conserva trabajo y rechazo de perfil bloquea la UI", async ({
+  page,
+}) => {
+  await page.clock.install();
+  await login(page, "admin");
+  await expect(page).toHaveURL(/admin\/panel/);
+  await page.goto("/admin/usuarios");
+  await expect(page.getByRole("table")).toBeVisible();
+  await page.getByLabel("Nombre o correo").fill("Trabajo privado sin enviar");
+  let status = 503;
+  await page.route("**/api/v1/auth/yo", (route) =>
+    route.fulfill({
+      status,
+      json: {
+        data: null,
+        error: {
+          code: status === 503 ? "AUTH_UNAVAILABLE" : "ACCOUNT_DISABLED",
+          message: "Fallo simulado local",
+        },
+        meta: null,
+      },
+    }),
+  );
+  await page.clock.runFor(60001);
+  await expect(
+    page.getByText(/No se pudo comprobar el perfil en segundo plano/),
+  ).toBeVisible();
+  await expect(page.getByLabel("Nombre o correo")).toHaveValue(
+    "Trabajo privado sin enviar",
+  );
+  await expect(
+    page.getByText("Validando sesión…", { exact: true }),
+  ).toHaveCount(0);
+  status = 403;
+  await page.clock.runFor(60001);
+  await expect(
+    page.getByRole("heading", { name: "No se pudo validar el acceso" }),
+  ).toBeVisible();
+  await expect(page.getByRole("table")).toHaveCount(0);
 });

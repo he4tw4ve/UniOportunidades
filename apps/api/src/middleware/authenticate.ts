@@ -12,7 +12,7 @@ export function authenticatedProfile(res: Response): Profile {
 export function authenticate(gateway: AuthGateway): RequestHandler {
   return async (req, res, next) => {
     const match = /^Bearer ([^\s]+)$/i.exec(req.headers.authorization ?? "");
-    if (!match)
+    if (!match || match[1].length > 8192)
       throw new AppError(401, "UNAUTHORIZED", "Inicia sesión para continuar.");
     const user = await gateway.verify(match[1]);
     if (!user)

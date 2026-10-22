@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/features/auth/AuthProvider";
 import { Button } from "@/components/ui/button";
@@ -15,8 +15,14 @@ export function OffersListPage({
   queue?: boolean;
 }) {
   const { session, profile } = useAuth();
+  const [params] = useSearchParams();
   const [tipo, setType] = useState(""),
-    [estado, setStatus] = useState(""),
+    [estado, setStatus] = useState(() => {
+      const value = params.get("estado") ?? "";
+      return Object.hasOwn({ ...revisionLabels, ...operatingLabels }, value)
+        ? value
+        : "";
+    }),
     [q, setQuery] = useState(""),
     [search, setSearch] = useState(""),
     [page, setPage] = useState(1);

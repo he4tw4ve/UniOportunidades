@@ -306,6 +306,35 @@ export class OffersRepository {
       pageSize: filters.pageSize,
     };
   }
+  async publisherSummary(userId: string) {
+    const result = await this.pool.query(
+      `WITH scoped AS (
+        SELECT o.id,o.tipo,o.estado_operativo,o.updated_at,g.nombre AS organizacion_nombre,g.estado AS organizacion_estado,
+          latest.id AS revision_id,latest.titulo,latest.estado_revision,latest.numero_version,
+          published.titulo AS titulo_publicado,published.numero_version AS version_publicada,
+          published.fecha_limite::text AS fecha_publicada,
+          COALESCE(published.fecha_limite >= $2::date,false) AS vigente,
+          COALESCE(published.estado_revision='approved',false) AS publicada
+        FROM public.ofertas o JOIN public.organizaciones g ON g.id=o.organizacion_id
+        JOIN LATERAL (SELECT id,titulo,estado_revision,numero_version FROM public.revisiones_oferta r
+          WHERE r.oferta_id=o.id ORDER BY numero_version DESC LIMIT 1) latest ON true
+        LEFT JOIN public.revisiones_oferta published ON published.id=o.revision_publicada_id AND published.oferta_id=o.id
+        WHERE EXISTS(SELECT 1 FROM public.miembros_organizacion m JOIN public.perfiles p ON p.id=m.usuario_id
+          WHERE m.usuario_id=$1 AND m.organizacion_id=o.organizacion_id AND p.rol='publisher' AND p.activo=true)
+      ) SELECT count(*)::int AS total,
+        count(*) FILTER(WHERE estado_revision='draft' AND estado_operativo<>'archived')::int AS borradores,
+        count(*) FILTER(WHERE estado_revision='pending' AND estado_operativo<>'archived')::int AS en_revision,
+        count(*) FILTER(WHERE estado_revision='rejected' AND estado_operativo<>'archived')::int AS rechazadas,
+        count(*) FILTER(WHERE publicada AND estado_operativo<>'archived')::int AS publicadas,
+        count(*) FILTER(WHERE publicada AND estado_operativo='open' AND organizacion_estado='approved' AND vigente)::int AS activas,
+        COALESCE((SELECT json_agg(recent) FROM (SELECT id,tipo,estado_operativo,organizacion_nombre,
+          revision_id,titulo,estado_revision,numero_version,titulo_publicado,version_publicada,fecha_publicada,vigente
+          FROM scoped ORDER BY updated_at DESC,id LIMIT 5) recent),'[]'::json) AS recientes
+      FROM scoped`,
+      [userId, hermosilloToday()],
+    );
+    return result.rows[0];
+  }
   async clone(actor: Actor, id: string, version: string) {
     await transaction(this.pool, async (db) => {
       const { offer, org } = await this.lockedOffer(db, actor, id);

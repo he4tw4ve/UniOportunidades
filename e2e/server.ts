@@ -48,6 +48,19 @@ const ids = new Map(demoAccounts.map((a, i) => [a.email, seedId(1000 + i)]));
 for (const id of ids.values())
   await db.query("INSERT INTO auth.users(id) VALUES($1)", [id]);
 await seedDatabase(db, ids);
+// Extra directory fixtures exist only in this ephemeral harness, never in the demo seed.
+for (let index = 0; index < 24; index++) {
+  const id = seedId(1800 + index);
+  await db.query("INSERT INTO auth.users(id) VALUES($1)", [id]);
+  await db.query(
+    "INSERT INTO public.perfiles(id,nombre_completo,email,rol) VALUES($1,$2,$3,'student')",
+    [
+      id,
+      `Directorio FICTICIO ${index + 1}`,
+      `directorio-${index + 1}@example.test`,
+    ],
+  );
+}
 const tokenFor = (id: string) =>
   `${Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url")}.${Buffer.from(JSON.stringify({ sub: id, exp: Math.floor(Date.now() / 1000) + 3600 })).toString("base64url")}.local-test-only`;
 const tokens = new Map([...ids.values()].map((id) => [tokenFor(id), id]));
@@ -125,7 +138,7 @@ host.post("/auth/v1/signup", (_req, res) =>
     created_at: "2026-01-01T00:00:00Z",
   }),
 );
-host.use(
+const createTestApp = () =>
   createApp("http://127.0.0.1:3100", {
     gateway,
     profiles,
@@ -139,8 +152,20 @@ host.use(
       profiles,
       new DemoStudentIdentityProvider(profiles),
     ),
-  }),
-);
+  });
+const testApp = createTestApp();
+testApp.set("trust proxy", 1);
+let testClient = 1;
+// Model a distinct client per test, preserving the real limiter within each
+// test. The harness overwrites forwarded IPs; production configuration is untouched.
+host.post("/__test/reset-http-state", (_req, res) => {
+  testClient++;
+  res.status(204).end();
+});
+host.use((req, res, next) => {
+  req.headers["x-forwarded-for"] = `127.0.0.${testClient}`;
+  testApp(req, res, next);
+});
 const server = host.listen(3101, "127.0.0.1", () =>
   console.log("E2E isolated API ready"),
 );

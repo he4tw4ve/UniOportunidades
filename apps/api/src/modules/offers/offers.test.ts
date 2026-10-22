@@ -627,3 +627,119 @@ describe("Ofertas y revisiones sobre PostgreSQL embebido", () => {
     }
   });
 });
+
+describe("Fase 7: resumen operativo real", () => {
+  it("cuenta última revisión y versión publicada por separado, sin N+1", async () => {
+    await create();
+    await pending();
+    const reject = await pending();
+    await offers.decide(
+      administrator,
+      reject.revisiones[0].id,
+      reject.revisiones[0].version,
+      "rejected",
+      "Corregir datos",
+    );
+    const published = await approved();
+    const edit = await offers.clone(actor(), published.id, published.version);
+    await offers.submit(
+      actor(),
+      edit.revisiones[0].id,
+      edit.revisiones[0].version,
+    );
+    const closed = await approved();
+    await offers.state(actor(), closed.id, closed.version, "closed");
+    const expired = await approved();
+    await db.query(
+      "UPDATE public.revisiones_oferta SET fecha_limite='2000-01-01' WHERE id=$1",
+      [expired.revision_publicada_id],
+    );
+    const archived = await approved();
+    await db.query(
+      "UPDATE public.ofertas SET estado_operativo='archived' WHERE id=$1",
+      [archived.id],
+    );
+    const query = vi.spyOn(pool, "query");
+    const result = await offers.publisherSummary(publisher);
+    expect(query).toHaveBeenCalledTimes(1);
+    query.mockRestore();
+    expect(result).toMatchObject({
+      total: 7,
+      borradores: 1,
+      en_revision: 2,
+      rechazadas: 1,
+      publicadas: 3,
+      activas: 1,
+    });
+    expect(result.recientes).toHaveLength(5);
+    const response = await api("get", "/publicador/resumen", publisher);
+    expect(response.status).toBe(200);
+    expect(response.body.data).toEqual(result);
+    await db.query(
+      "UPDATE public.organizaciones SET estado='suspended' WHERE id=$1",
+      [orgId],
+    );
+    expect((await offers.publisherSummary(publisher)).activas).toBe(0);
+    expect((await offers.publisherSummary(publisher)).publicadas).toBe(3);
+    for (const actorId of [student, admin])
+      expect((await api("get", "/publicador/resumen", actorId)).status).toBe(
+        403,
+      );
+    expect((await api("get", "/publicador/resumen")).status).toBe(401);
+    expect(
+      (
+        await api(
+          "get",
+          `/publicador/resumen?organizacion_id=${orgId}`,
+          publisher,
+        )
+      ).status,
+    ).toBe(400);
+    expect((await offers.publisherSummary(other)).total).toBe(0);
+  });
+  it("devuelve ceros reales sin inventar oportunidades", async () => {
+    const result = await api("get", "/publicador/resumen", publisher);
+    expect(result.body.data).toEqual({
+      total: 0,
+      borradores: 0,
+      en_revision: 0,
+      rechazadas: 0,
+      publicadas: 0,
+      activas: 0,
+      recientes: [],
+    });
+  });
+});
+
+describe("Fase 8: doble envío HTTP y conflictos sin duplicar auditoría", () => {
+  it("repetir enviar conserva una única transición a pending", async () => {
+    const draft = await create();
+    const revision = draft.revisiones[0];
+    const path = `/publicador/revisiones/${revision.id}/enviar`;
+    expect(
+      (await api("post", path, publisher).send({ version: revision.version }))
+        .status,
+    ).toBe(200);
+    expect(
+      (await api("post", path, publisher).send({ version: revision.version }))
+        .status,
+    ).toBe(409);
+    expect(
+      (
+        await db.query(
+          "SELECT id FROM public.eventos_auditoria WHERE entidad_id=$1 AND accion='revision_enviada'",
+          [draft.id],
+        )
+      ).rows,
+    ).toHaveLength(1);
+    const response = await api(
+      "get",
+      `/publicador/ofertas/${draft.id}`,
+      publisher,
+    );
+    expect(response.body.data.revisiones[0].estado_revision).toBe("pending");
+    expect((await api("get", `/ofertas/${draft.id}`, student)).status).toBe(
+      404,
+    );
+  });
+});

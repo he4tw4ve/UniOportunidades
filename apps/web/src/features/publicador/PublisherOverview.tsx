@@ -1,6 +1,10 @@
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { listOffers, revisionLabels, operatingLabels } from "@/lib/offers";
+import {
+  getPublisherSummary,
+  revisionLabels,
+  operatingLabels,
+} from "@/lib/offers";
 import { Button } from "@/components/ui/button";
 export function PublisherOverview({
   token,
@@ -13,14 +17,7 @@ export function PublisherOverview({
 }) {
   const query = useQuery({
     queryKey: ["publisher-overview", userId],
-    queryFn: ({ signal }) =>
-      listOffers(
-        token,
-        false,
-        false,
-        { tipo: "", estado: "", q: "", page: 1 },
-        signal,
-      ),
+    queryFn: ({ signal }) => getPublisherSummary(token, signal),
     retry: false,
   });
   return (
@@ -48,39 +45,79 @@ export function PublisherOverview({
             Reintentar oportunidades
           </Button>
         </div>
-      ) : !query.data?.items.length ? (
-        <p className="text-sm text-muted-foreground">
-          Todavía no has creado oportunidades.
-          {canPublish
-            ? " Crea tu primer borrador para comenzar."
-            : " La publicación se habilitará cuando tu organización tenga aprobación y permisos."}
-        </p>
-      ) : (
+      ) : query.data ? (
         <>
-          <p className="mb-4 text-sm text-muted-foreground">
-            {query.data.total} oportunidades en total · Últimas 5
-          </p>
-          <ul className="dashboard-list">
-            {query.data.items.slice(0, 5).map((o) => (
-              <li key={o.id}>
-                <Link to={`/publicador/ofertas/${o.id}/editar`}>
-                  {o.titulo}
-                </Link>
-                <p>
-                  {revisionLabels[o.estado_revision]} ·{" "}
-                  {operatingLabels[o.estado_operativo]} · Versión{" "}
-                  {o.numero_version}
-                </p>
-                <p>
-                  {o.titulo_publicado
-                    ? `Publicada: ${o.titulo_publicado}`
-                    : "Sin versión publicada"}
-                </p>
-              </li>
+          <dl className="mb-5 grid grid-cols-2 gap-3 lg:grid-cols-5">
+            {(
+              [
+                ["Borradores", query.data.borradores, "draft"],
+                ["En revisión", query.data.en_revision, "pending"],
+                ["Rechazadas", query.data.rechazadas, "rejected"],
+                ["Publicadas", query.data.publicadas, ""],
+                ["Activas en catálogo", query.data.activas, ""],
+              ] as const
+            ).map(([label, count, filter]) => (
+              <div className="rounded-xl bg-muted p-3" key={label}>
+                <dt className="text-sm">
+                  {filter ? (
+                    <Link
+                      className="text-primary underline"
+                      to={`/publicador/ofertas?estado=${filter}`}
+                    >
+                      {label}
+                    </Link>
+                  ) : (
+                    label
+                  )}
+                </dt>
+                <dd className="mt-1 text-2xl font-bold text-primary">
+                  {count}
+                </dd>
+              </div>
             ))}
-          </ul>
+          </dl>
+          <p className="mb-4 text-xs text-muted-foreground">
+            Borradores, en revisión y rechazadas corresponden a la última
+            revisión de oportunidades no archivadas. Publicadas cuentan con
+            versión aprobada y no están archivadas. Activas son las visibles en
+            catálogo: abiertas, vigentes y con organización aprobada. Los grupos
+            pueden coincidir.
+          </p>
+          {!query.data.recientes.length ? (
+            <p className="text-sm text-muted-foreground">
+              Todavía no has creado oportunidades.
+              {canPublish
+                ? " Crea tu primer borrador para comenzar."
+                : " La publicación se habilitará cuando tu organización tenga aprobación y permisos."}
+            </p>
+          ) : (
+            <>
+              <p className="mb-4 text-sm text-muted-foreground">
+                {query.data.total} oportunidades en total · Últimas 5
+              </p>
+              <ul className="dashboard-list">
+                {query.data.recientes.map((o) => (
+                  <li key={o.id}>
+                    <Link to={`/publicador/ofertas/${o.id}/editar`}>
+                      {o.titulo}
+                    </Link>
+                    <p>
+                      {revisionLabels[o.estado_revision]} ·{" "}
+                      {operatingLabels[o.estado_operativo]} · Versión{" "}
+                      {o.numero_version}
+                    </p>
+                    <p>
+                      {o.titulo_publicado
+                        ? `Publicada: ${o.titulo_publicado}`
+                        : "Sin versión publicada"}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </>
-      )}
+      ) : null}
       <Link
         className="mt-5 inline-block text-sm font-semibold text-primary underline"
         to="/publicador/ofertas"

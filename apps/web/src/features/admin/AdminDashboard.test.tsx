@@ -15,7 +15,7 @@ const mocks = vi.hoisted(() => ({ request: vi.fn() }));
 vi.mock("@/features/auth/AuthProvider", () => ({
   useAuth: () => ({
     session: { access_token: "test" },
-    profile: { id: "admin-test" },
+    profile: { id: "admin-test", rol: "admin" },
   }),
 }));
 vi.mock("@/lib/apiClient", () => ({ apiRequest: mocks.request }));
@@ -76,17 +76,24 @@ it("anuncia carga mientras los indicadores no responden", () => {
   expect(screen.getAllByRole("status")[0].textContent).toContain("Cargando");
 });
 it("usuarios muestra roles en español sin controles para cambiarlos", async () => {
-  mocks.request.mockResolvedValue([
-    {
-      id: "test",
-      nombre_completo: "Persona ficticia",
-      email: "ficticia@example.test",
-      rol: "student",
-      activo: true,
-    },
-  ]);
+  mocks.request.mockResolvedValue({
+    items: [
+      {
+        id: "test",
+        nombre_completo: "Persona ficticia",
+        email: "ficticia@example.test",
+        rol: "student",
+        activo: true,
+      },
+    ],
+    total: 1,
+    page: 1,
+    pageSize: 20,
+  });
   view(<UsersPage />);
-  expect(await screen.findByText("Estudiante")).toBeTruthy();
+  expect(await screen.findByRole("table")).toBeTruthy();
+  expect(screen.getByRole("table").textContent).toContain("Estudiante");
   expect(screen.getByRole("table")).toBeTruthy();
-  expect(screen.queryByRole("combobox")).toBeNull();
+  expect(screen.queryByRole("button", { name: /Cambiar rol/ })).toBeNull();
+  expect(screen.getAllByRole("combobox")).toHaveLength(2);
 });

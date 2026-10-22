@@ -50,3 +50,71 @@ describe("Verificación real del adaptador Supabase con transporte simulado", ()
     ).toBeNull();
   });
 });
+
+describe("Fiabilidad y rechazo de tokens en Auth", () => {
+  it("un JWT caducado rechazado por el proveedor no se acepta por su metadata", async () => {
+    const token = [
+      Buffer.from(JSON.stringify({ alg: "none" })).toString("base64url"),
+      Buffer.from(
+        JSON.stringify({ sub: "attacker", exp: 1, role: "admin" }),
+      ).toString("base64url"),
+      "fixture",
+    ].join(".");
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ code: "bad_jwt", msg: "expired" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    expect(
+      await createAuthGateway("https://demo.supabase.co", "public-key").verify(
+        token,
+      ),
+    ).toBeNull();
+    expect(
+      new Headers(fetchMock.mock.calls[0][1].headers).get("Authorization"),
+    ).toBe(`Bearer ${token}`);
+    expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
+  });
+  it.each(["verify", "signIn"] as const)(
+    "%s distingue caída de red de credenciales inválidas",
+    async (method) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockRejectedValue(new TypeError("NO_PUBLICAR")),
+      );
+      const gateway = createAuthGateway(
+        "https://demo.supabase.co",
+        "public-key",
+      );
+      const result =
+        method === "verify"
+          ? gateway.verify("token")
+          : gateway.signIn("persona@example.test", "fixture");
+      await expect(result).rejects.toMatchObject({
+        status: 503,
+        code: "AUTH_UNAVAILABLE",
+      });
+    },
+  );
+  it.each([503, 429])(
+    "no filtra la respuesta cruda de Auth %i",
+    async (status) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          new Response(JSON.stringify({ msg: "NO_PUBLICAR" }), {
+            status,
+            headers: { "Content-Type": "application/json" },
+          }),
+        ),
+      );
+      await expect(
+        createAuthGateway("https://demo.supabase.co", "public-key").verify(
+          "token",
+        ),
+      ).rejects.toMatchObject({ status });
+    },
+  );
+});

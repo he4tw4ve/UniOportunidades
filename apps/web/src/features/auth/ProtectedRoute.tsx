@@ -4,7 +4,7 @@ import { canAccess, type Role } from "./access";
 import { useState } from "react";
 export function ProtectedRoute({ roles }: { roles: readonly Role[] }) {
   const [logoutError, setLogoutError] = useState("");
-  const { auth, error, refresh, signOut } = useAuth();
+  const { auth, profile, error, refresh, signOut } = useAuth();
   const location = useLocation();
   if (auth.status === "loading")
     return (
@@ -44,5 +44,25 @@ export function ProtectedRoute({ roles }: { roles: readonly Role[] }) {
         state={{ from: location.pathname }}
       />
     );
-  return <Outlet />;
+  return (
+    <>
+      {error && (
+        <div role="status" className="organization-notice notice-warning">
+          <p>No se pudo comprobar el perfil en segundo plano. {error}</p>
+          <button className="underline" onClick={() => void refresh()}>
+            Reintentar validación
+          </button>
+        </div>
+      )}
+      <Outlet
+        key={JSON.stringify([
+          profile?.id,
+          profile?.rol,
+          profile?.organizacion?.id,
+          profile?.organizacion?.estado,
+          [...(profile?.organizacion?.permisos ?? [])].sort(),
+        ])}
+      />
+    </>
+  );
 }

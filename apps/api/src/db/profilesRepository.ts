@@ -1,5 +1,6 @@
 import type { Queryable } from "./pool.js";
 import type { Profile } from "../shared/types.js";
+import type { UsersQuery } from "../modules/admin/validation.js";
 export class ProfilesRepository {
   constructor(private db: Queryable) {}
   async findById(id: string): Promise<Profile | null> {
@@ -24,11 +25,27 @@ export class ProfilesRepository {
     );
     return result.rows[0] ?? null;
   }
-  async list() {
-    return (
-      await this.db.query(
-        "SELECT id,nombre_completo,email,rol,activo FROM public.perfiles ORDER BY created_at DESC LIMIT 100",
-      )
-    ).rows;
+  async list(input: UsersQuery) {
+    const values = [
+      input.q ? `%${input.q.replace(/[\\%_]/g, "\\$&")}%` : null,
+      input.rol ?? null,
+      input.activo ?? null,
+    ];
+    const where = ` FROM public.perfiles WHERE ($1::text IS NULL OR nombre_completo ILIKE $1 OR email ILIKE $1)
+      AND ($2::text IS NULL OR rol=$2) AND ($3::boolean IS NULL OR activo=$3)`;
+    // One statement gives count and page the same snapshot, including empty pages.
+    const result = await this.db.query<{
+      items: Pick<
+        Profile,
+        "id" | "nombre_completo" | "email" | "rol" | "activo"
+      >[];
+      total: number;
+    }>(
+      `SELECT (SELECT count(*)::int ${where}) AS total,
+      COALESCE((SELECT json_agg(page) FROM (SELECT id,nombre_completo,email,rol,activo ${where}
+      ORDER BY created_at DESC,id LIMIT $4 OFFSET $5) page),'[]'::json) AS items`,
+      [...values, input.pageSize, (input.page - 1) * input.pageSize],
+    );
+    return { ...result.rows[0], page: input.page, pageSize: input.pageSize };
   }
 }

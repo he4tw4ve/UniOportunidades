@@ -383,6 +383,7 @@ textarea {
 }
 .section-heading {
   display: flex;
+  flex-wrap: wrap;
   align-items: start;
   justify-content: space-between;
   gap: 1rem;
@@ -392,7 +393,7 @@ textarea {
   font-weight: 750;
   font-size: 1.15rem;
 }
-.section-heading a {
+.section-heading a:not([data-slot="button"]) {
   color: var(--brand-blue);
   text-decoration: underline;
   font-size: 0.85rem;

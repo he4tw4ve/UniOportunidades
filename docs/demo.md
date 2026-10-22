@@ -1,4 +1,4 @@
-# Guion de demostración · Fase 6
+# Guion de demostración · Fase 7
 
 ## Preparación
 
@@ -46,3 +46,13 @@ npm.cmd run test:e2e
 ```
 
 Playwright inicia web en 3100 y API en 3101, con PostgreSQL embebido efímero y un adaptador Auth exclusivamente de pruebas. No carga `.env` del servidor ni contacta Supabase. Usa el código de UI, rutas, repositorios y seed reales. No sustituye la verificación del proveedor Auth, SMTP o conectividad de tu proyecto. Credenciales y tokens de prueba carecen de acceso a producción. Los puertos deben estar libres. Guarda capturas de UI con datos ficticios aislados para revisión visual bajo `test-results/`; no guarda contraseñas, tokens, vídeos ni trazas.
+
+## Comprobación adicional de Fase 7
+
+1. Abre dos pestañas con la misma cuenta y conserva texto sin enviar en un filtro/formulario. Alterna entre ellas 10–15 veces: no debe aparecer «Validando sesión…» ni perderse el texto. Recarga una ruta profunda y comprueba restauración inicial. Cierra sesión en una pestaña y verifica que la otra retire el contenido privado.
+2. Como publicador, revisa el panel: última revisión y versión publicada se muestran por separado; las métricas pueden superponerse. Abre borradores/en revisión/rechazadas mediante sus enlaces. Comprueba estado y permisos efectivos; el detalle e historial están en Información y estado.
+3. Abre Miembros de mi organización con cada publicador. Si hay un miembro, debe mostrar uno; solo correos de la organización propia. Repite con la cuenta pendiente si aún conserva ese estado. Verifica 360 px, navegación por teclado y recarga directa de `/publicador/miembros`.
+4. Como admin, abre Usuarios. Busca por nombre/correo, combina rol y activo, cambia página si tus datos superan 20 cuentas, prueba búsqueda sin coincidencias y limpia filtros. El directorio es de solo lectura. No crees cuentas remotas solo para completar una página.
+5. Con DevTools offline, provoca una revalidación después de una sesión ya validada: conserva UI y muestra aviso/reintento mientras el token sea válido. Al recuperar conexión, reintenta. Un perfil inactivo o token inválido debe bloquear; usa fixtures ya preparadas o solicita autorización antes de alterar datos remotos.
+
+Las pruebas automatizadas usan 24 perfiles adicionales exclusivamente en la base efímera de E2E para ejercitar paginación. No cambian el seed demo. El harness asigna una IP de cliente distinta por test y sobrescribe sus cabeceras de proxy para aislar intentos de login; conserva el limitador real dentro de cada test y no cambia su configuración de producción. Ver evidencia y límites en `phase-7-verification.md`.

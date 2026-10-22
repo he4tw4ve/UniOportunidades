@@ -109,7 +109,7 @@ El diagnóstico ahora muestra `clientToEndpointTls`: lee el socket real del driv
 
 `postgresBackendTls` muestra por separado la fila de PostgreSQL (`ssl`, versión, cifrado y bits). Una fila ausente se informa como desconocida, no como `false`. Esta comprobación no demuestra cifrado de extremo a extremo entre todos los tramos de la infraestructura.
 
-En la comprobación de solo lectura realizada con la configuración actual, Node → pooler negoció **TLSv1.3**, cifrado **TLS_AES_256_GCM_SHA384**, certificado autorizado y hostname válido, manteniendo `sslmode=verify-full` con CA explícita. El backend PostgreSQL reportó una fila real con `ssl=false`. `auth.users` existe, el historial no existe y hay cero tablas públicas: la migración inicial sigue pendiente. No se ejecutó ninguna migración durante esta comprobación.
+**Diagnóstico histórico anterior a la migración inicial:** en aquella comprobación de solo lectura, Node → pooler negoció **TLSv1.3**, cifrado **TLS_AES_256_GCM_SHA384**, certificado autorizado y hostname válido, manteniendo `sslmode=verify-full` con CA explícita. El backend PostgreSQL reportó una fila real con `ssl=false`. `auth.users` existe, el historial no existe y hay cero tablas públicas: la migración inicial sigue pendiente. No se ejecutó ninguna migración durante esta comprobación.
 
 La conexión cliente está verificada y permite proceder a `npm.cmd run db:migrate` desde el punto de vista de TLS; los permisos/DDL solo se comprobarán al ejecutarla. Si se exige TLS en cada tramo hasta PostgreSQL, esta comprobación no lo acredita: hay que utilizar y verificar una conexión directa o confirmar la configuración interna con Supabase.
 
@@ -139,3 +139,13 @@ No cambies `verify-full` por `no-verify` ni desactives la validación SSL. La co
 - `429 TOO_MANY_REQUESTS`: espera la ventana del limitador; reiniciar la API local reinicia su almacenamiento en memoria.
 
 La implementación se verificó con dependencias simuladas de Auth y PostgreSQL embebido. Sin credenciales no se ha migrado tu proyecto remoto ni enviado correos ni comprobado un login real contra Supabase.
+
+## Controles y estado observado en Fase 8
+
+La revisión read-only de Fase 8 sí encontró las 13 tablas existentes, todas con RLS, sin grants directos de SELECT/INSERT/UPDATE/DELETE para anon/authenticated y sin políticas cliente. TLS Node → destino configurado validó certificado y hostname. Esto actualiza el diagnóstico histórico de base vacía; no se aplicaron migraciones ni escrituras. Evidencia y límites en `security-review.md`.
+
+El pool ahora rechaza conexiones no locales sin `sslmode=verify-full` o con validación global de TLS desactivada. Conserva la CA oficial y las rutas locales ya configuradas; no edites el entorno para eludir el guard. Los `.env.example` son plantillas vacías, nunca credenciales reales.
+
+`WEB_ORIGIN` exige origen HTTP(S) exacto sin ruta/credenciales. `TRUST_PROXY` vacío significa false. Antes de usar un proxy, identifica sus IPs/CIDRs y comprueba que sobrescriba las cabeceras forwarded. No configures true, saltos arbitrarios ni redes /0. Login/registro usan memoria por instancia; no es un almacén distribuido.
+
+Vite permite solo las tres variables públicas documentadas y detiene el build ante claves privadas/tokens de usuario. Revisa Supabase Auth/SMTP, confirmación de correo, URLs de retorno, rate limits y CAPTCHA según el registro demo previsto; esta revisión no cambió esos ajustes.
